@@ -43,7 +43,7 @@ const ENDED_STAGES: Stage[] = ["rejected", "withdrawn"];
 export function Board() {
   const applications = useJobTrackStore((state) => state.applications);
   const moveStage = useJobTrackStore((state) => state.moveStage);
-  const reorderApplications = useJobTrackStore((state) => state.updateApplication);
+  const reorderApplications = useJobTrackStore((state) => state.reorderApplications);
   const addInterviewLog = useJobTrackStore((state) => state.addInterviewLog);
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -99,7 +99,9 @@ export function Board() {
 
   // 按阶段分组应用
   const getByStage = (stage: Stage) =>
-    applications.filter((app) => app.stage === stage);
+    applications
+      .filter((app) => app.stage === stage)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -173,9 +175,8 @@ export function Board() {
 
       if (oldIndex !== newIndex) {
         const reordered = arrayMove(stageApps, oldIndex, newIndex);
-        reordered.forEach((app) => {
-          reorderApplications(app.id, { updatedAt: new Date() });
-        });
+        const orderedIds = reordered.map((app) => app.id);
+        reorderApplications(targetStage, orderedIds);
       }
     }
   };
@@ -223,7 +224,7 @@ export function Board() {
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div className="flex gap-6 overflow-x-auto pb-4">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

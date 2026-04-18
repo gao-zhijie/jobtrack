@@ -52,6 +52,7 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
       position: form.position.trim(),
       platform: form.platform,
       stage: form.stage,
+      sortOrder: Date.now(),
       appliedAt: new Date(form.appliedAt),
       nextDeadline: form.nextDeadline ? new Date(form.nextDeadline) : undefined,
       nextAction: form.nextAction.trim() || undefined,

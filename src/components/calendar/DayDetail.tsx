@@ -14,7 +14,18 @@ interface DayDetailProps {
 }
 
 export function DayDetail({ date, applications, conflicts, onClose }: DayDetailProps) {
-  const hasConflicts = conflicts.length > 1;
+  // 计算当天总事件数（面试记录 + 截止日期）
+  const totalEvents = applications.reduce((count, app) => {
+    const interviewCount = app.interviewLogs.filter(
+      (log) => new Date(log.date).toDateString() === date.toDateString()
+    ).length;
+    const hasDeadline =
+      app.nextDeadline &&
+      new Date(app.nextDeadline).toDateString() === date.toDateString();
+    return count + interviewCount + (hasDeadline ? 1 : 0);
+  }, 0);
+
+  const hasConflicts = totalEvents > 1;
 
   // 生成调整建议
   const getRescheduleSuggestions = () => {
@@ -70,7 +81,7 @@ export function DayDetail({ date, applications, conflicts, onClose }: DayDetailP
                     面试时间冲突
                   </p>
                   <p className="text-xs text-text-secondary mt-1">
-                    你在当天有 {conflicts.length} 场面试，时间可能冲突
+                    你在当天有 {totalEvents} 场面试，时间可能冲突
                   </p>
                 </div>
               </div>

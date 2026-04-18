@@ -129,6 +129,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "referral",
     appliedAt: daysAgo(14),
     stage: "interview2",
+    sortOrder: 0,
     nextDeadline: daysFromNow(1),
     nextAction: "二面：准备交易链路 case",
     resumeVersion: "V2.3-电商方向",
@@ -148,6 +149,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "official",
     appliedAt: daysAgo(21),
     stage: "final",
+    sortOrder: 1,
     nextDeadline: daysAgo(1),
     nextAction: "终面：集团 CTO + HR 交叉面",
     resumeVersion: "V2.2-数据产品",
@@ -167,6 +169,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "boss",
     appliedAt: daysAgo(5),
     stage: "written",
+    sortOrder: 2,
     nextDeadline: daysFromNow(3),
     nextAction: "等待笔试结果，预计周内出",
     resumeVersion: "V2.1-通用版",
@@ -186,6 +189,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "niuke",
     appliedAt: daysAgo(1),
     stage: "applied",
+    sortOrder: 3,
     notes:
       "牛客上看到 JD，用户研究岗，方向是创作者生态。之前做过主播相关的调研，对这个领域有点兴趣。投递后还没收到回复，一般要等 3-5 个工作日。",
     interviewLogs: [],
@@ -203,6 +207,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "official",
     appliedAt: daysAgo(2),
     stage: "applied",
+    sortOrder: 4,
     notes:
       "在脉脉上看到这个岗位的信息，说团队正在扩张。官网写的薪资范围比较大（25-45K），可能是预算上限高，实际谈薪资再确认。",
     interviewLogs: [],
@@ -220,6 +225,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "referral",
     appliedAt: daysAgo(10),
     stage: "interview1",
+    sortOrder: 5,
     nextDeadline: daysFromNow(2),
     nextAction: "下午 2 点：业务初面（视频）",
     resumeVersion: "V2.2-硬件方向",
@@ -236,6 +242,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "boss",
     appliedAt: daysAgo(8),
     stage: "interview1",
+    sortOrder: 6,
     nextDeadline: daysFromNow(2),
     nextAction: "下午 4 点：HR 视频初面",
     resumeVersion: "V2.1-通用版",
@@ -256,6 +263,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "other",
     appliedAt: daysAgo(30),
     stage: "applied",
+    sortOrder: 7,
     notes:
       "在某应届生群里看到的内推信息，说是急着要人。投了之后石沉大海，连简历筛选都没过也正常。这个岗位后来在官网也下架了，估计是招到人了。",
     interviewLogs: [],
@@ -273,6 +281,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "referral",
     appliedAt: daysAgo(35),
     stage: "offer",
+    sortOrder: 8,
     nextDeadline: daysFromNow(5),
     nextAction: "offer 确认DDL：下周三前回复",
     resumeVersion: "V2.0-最终版",
@@ -293,6 +302,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "niuke",
     appliedAt: daysAgo(25),
     stage: "rejected",
+    sortOrder: 9,
     nextAction: "已结束，等待归档",
     resumeVersion: "V2.1-通用版",
     notes:
@@ -312,6 +322,7 @@ export const MOCK_APPLICATIONS: Application[] = [
     platform: "official",
     appliedAt: daysAgo(6),
     stage: "interview1",
+    sortOrder: 10,
     nextDeadline: today, // 今天截止
     nextAction: "晚上 8 点前：完成笔试题并提交",
     resumeVersion: "V2.1-通用版",
@@ -360,6 +371,7 @@ export function createEmptyApplication(): Omit<Application, "id" | "createdAt" |
     platform: "other",
     appliedAt: new Date(),
     stage: "applied",
+    sortOrder: Date.now(),
     interviewLogs: [],
   };
 }

@@ -15,6 +15,7 @@ interface JobTrackState {
   addApplication: (data: Omit<Application, "id" | "createdAt" | "updatedAt" | "interviewLogs">) => string;
   updateApplication: (id: string, patch: Partial<Application>) => void;
   deleteApplication: (id: string) => void;
+  reorderApplications: (stage: Stage, orderedIds: string[]) => void;
 
   // Stage 流转
   moveStage: (id: string, newStage: Stage) => void;
@@ -41,6 +42,7 @@ export const useJobTrackStore = create<JobTrackState>()(
         const newApp: Application = {
           ...data,
           id,
+          sortOrder: Date.now(),
           interviewLogs: [],
           createdAt: now,
           updatedAt: now,
@@ -65,6 +67,26 @@ export const useJobTrackStore = create<JobTrackState>()(
         set((state) => ({
           applications: state.applications.filter((app) => app.id !== id),
         }));
+      },
+
+      reorderApplications: (stage, orderedIds) => {
+        set((state) => {
+          // Update sortOrder for apps in this stage based on their position in orderedIds
+          const stageApps = state.applications.filter((app) => app.stage === stage);
+          const otherApps = state.applications.filter((app) => app.stage !== stage);
+
+          const updatedStageApps = orderedIds.map((id, index) => {
+            const app = stageApps.find((a) => a.id === id);
+            if (app) {
+              return { ...app, sortOrder: index, updatedAt: new Date() };
+            }
+            return null;
+          }).filter(Boolean) as Application[];
+
+          return {
+            applications: [...otherApps, ...updatedStageApps],
+          };
+        });
       },
 
       moveStage: (id, newStage) => {
@@ -217,34 +239,35 @@ export const selectStats = (applications: Application[]): Stats => {
 export const selectConflicts = (
   applications: Application[]
 ): ConflictGroup[] => {
-  // 收集所有有面试日期的应用
-  const dateMap = new Map<string, Application[]>();
+  // 收集所有事件（面试记录 + 截止日期）
+  const dateMap = new Map<string, { app: Application; isInterview: boolean }[]>();
 
   applications.forEach((app) => {
     // 已有面试记录的日期
     app.interviewLogs.forEach((log) => {
       const dateKey = new Date(log.date).toISOString().split("T")[0];
       const existing = dateMap.get(dateKey) || [];
-      if (!existing.find((a) => a.id === app.id)) {
-        dateMap.set(dateKey, [...existing, app]);
-      }
+      existing.push({ app, isInterview: true });
+      dateMap.set(dateKey, existing);
     });
 
     // 即将到来的面试截止日期也算
     if (app.nextDeadline && app.stage !== "offer") {
       const dateKey = new Date(app.nextDeadline).toISOString().split("T")[0];
       const existing = dateMap.get(dateKey) || [];
-      if (!existing.find((a) => a.id === app.id)) {
-        dateMap.set(dateKey, [...existing, app]);
-      }
+      existing.push({ app, isInterview: false });
+      dateMap.set(dateKey, existing);
     }
   });
 
-  // 过滤出冲突（同一日期 > 1 场）
+  // 过滤出冲突（同一日期 > 1 事件）
   const conflicts: ConflictGroup[] = [];
-  dateMap.forEach((apps, date) => {
-    if (apps.length > 1) {
-      conflicts.push({ date, applications: apps });
+  dateMap.forEach((events, date) => {
+    if (events.length > 1) {
+      // 去重：同一应用在同一日期的多个事件只显示一次
+      const uniqueApps = Array.from(new Set(events.map((e) => e.app.id)))
+        .map((id) => events.find((e) => e.app.id === id)!.app);
+      conflicts.push({ date, applications: uniqueApps });
     }
   });
 

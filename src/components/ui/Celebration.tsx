@@ -12,7 +12,7 @@ export function Celebration({ onComplete }: CelebrationProps) {
 
   useEffect(() => {
     // Fade in
-    requestAnimationFrame(() => {
+    const frameId = requestAnimationFrame(() => {
       setOpacity(1);
       setScale(1);
     });
@@ -26,7 +26,10 @@ export function Celebration({ onComplete }: CelebrationProps) {
       }, 500);
     }, 2500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearTimeout(timer);
+    };
   }, [onComplete]);
 
   return (

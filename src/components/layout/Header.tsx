@@ -1,14 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
-
-const NAV_ITEMS = [
-  { href: "/board", label: "看板" },
-  { href: "/calendar", label: "日历" },
-  { href: "/weekly", label: "周报" },
-];
 
 export function Header() {
   const pathname = usePathname();
@@ -18,7 +11,7 @@ export function Header() {
   return (
     <>
       <header className="h-14 bg-white border-b border-border">
-        <div className="max-w-[1440px] mx-auto h-full px-6 grid grid-cols-3 items-center">
+        <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
             <svg
@@ -44,31 +37,8 @@ export function Header() {
             </span>
           </div>
 
-          {/* Navigation - always centered */}
-          <nav className="flex items-center justify-center gap-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-2 text-sm relative transition-colors duration-200 ${
-                    isActive
-                      ? "text-primary font-medium"
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* New Application Button - only show on board page */}
-          <div className="flex justify-end">
+          <div>
             {isBoardPage && (
               <button
                 onClick={() => {

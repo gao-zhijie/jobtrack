@@ -43,6 +43,7 @@ export interface Application {
   platform: Platform;      // 投递渠道
   appliedAt: Date;        // 投递日期
   stage: Stage;           // 当前阶段
+  sortOrder: number;       // 同阶段内的排序权重
   nextDeadline?: Date;    // 下一步截止时间
   nextAction?: string;     // 下一步要做的事，如"准备算法面"
   resumeVersion?: string;  // 简历版本标签，如 "V2.1-投递版"

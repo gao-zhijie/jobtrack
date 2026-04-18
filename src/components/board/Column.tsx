@@ -39,27 +39,30 @@ export function Column({ stage, applications, onCardClick }: ColumnProps) {
         ${showPlaceholder ? "bg-primary/5 ring-2 ring-primary ring-dashed ring-inset" : "bg-background"}
       `}
     >
-      {/* 列头 */}
-      <div className="px-1 pb-2">
-        <div className="flex items-center gap-2 mb-2">
+      {/* 列头 - 48px高度 */}
+      <div className="h-12 px-1 flex flex-col justify-center">
+        <div className="flex items-center gap-2">
           <span
-            className="text-sm font-medium text-text-primary"
-            style={{ color: stageColor }}
+            className="text-base font-semibold"
+            style={{ color: "#1C1D1F" }}
           >
             {stageName}
           </span>
+          {/* 彩色填充数量徽章 */}
           <span
-            className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium"
+            className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-medium text-white"
             style={{
-              backgroundColor: `${stageColor}20`,
-              color: stageColor,
+              backgroundColor: stageColor,
             }}
           >
             {applications.length}
           </span>
         </div>
-        {/* 状态色分割线 */}
-        <div className="h-0.5 rounded-full" style={{ backgroundColor: stageColor }} />
+        {/* 2px状态色分割线 */}
+        <div
+          className="h-0.5 rounded-full mt-1"
+          style={{ backgroundColor: stageColor }}
+        />
       </div>
 
       {/* 卡片列表 */}
