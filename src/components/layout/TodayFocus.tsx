@@ -97,7 +97,7 @@ function FocusCard({ item }: { item: FocusItem }) {
   };
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors duration-200 cursor-pointer">
+    <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors duration-200 cursor-pointer min-w-[200px]">
       {icons[item.type]}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-white truncate">
@@ -116,19 +116,35 @@ export function TodayFocus() {
 
   return (
     <div
-      className="h-[120px] rounded-lg overflow-hidden"
+      className="rounded-lg overflow-hidden"
       style={{ backgroundColor: "#0F0F14" }}
     >
       {items.length > 0 ? (
-        <div className="h-full flex flex-col justify-center px-4">
-          <div className="grid grid-cols-3 gap-4">
-            {items.map((item) => (
-              <FocusCard key={item.app.id} item={item} />
-            ))}
+        <>
+          {/* Desktop: 3-column grid */}
+          <div className="hidden md:block h-[120px]">
+            <div className="h-full flex flex-col justify-center px-4">
+              <div className="grid grid-cols-3 gap-4">
+                {items.map((item) => (
+                  <FocusCard key={item.app.id} item={item} />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Mobile: horizontal scroll */}
+          <div className="md:hidden">
+            <div className="h-[100px] overflow-x-auto">
+              <div className="flex gap-3 px-4 py-3 h-full items-center">
+                {items.map((item) => (
+                  <FocusCard key={item.app.id} item={item} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       ) : (
-        <div className="h-full flex items-center justify-center">
+        <div className="h-[100px] md:h-[120px] flex items-center justify-center">
           <div className="text-center">
             <div className="text-sm text-[#B4B6BA]">
               ✓ 今天没有需要立刻处理的事，好好准备下一场

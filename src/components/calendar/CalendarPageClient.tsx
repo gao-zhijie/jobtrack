@@ -50,7 +50,7 @@ export function CalendarPageClient() {
   };
 
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col">
+    <div className="h-[calc(100vh-56px)] md:h-[calc(100vh-56px)] lg:h-[calc(100vh)] flex flex-col">
       {/* Conflict Banner */}
       <ConflictBanner
         conflicts={conflicts}

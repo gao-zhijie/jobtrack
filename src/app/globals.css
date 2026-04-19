@@ -127,4 +127,53 @@ html {
   .border-primary {
     border-color: var(--primary);
   }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding for iOS */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Danger color */
+  .text-danger {
+    color: #DC2626;
+  }
+
+  .bg-danger {
+    background-color: #DC2626;
+  }
+
+  .bg-danger-bg {
+    background-color: #FEF3F2;
+  }
+
+  /* Stage colors */
+  .text-offer {
+    color: #059669;
+  }
+
+  .bg-offer\/10 {
+    background-color: rgba(5, 150, 105, 0.1);
+  }
+
+  .bg-primary\/10 {
+    background-color: rgba(94, 106, 210, 0.1);
+  }
+
+  .bg-written\/10 {
+    background-color: rgba(217, 119, 6, 0.1);
+  }
+
+  .text-written {
+    color: #D97706;
+  }
 }

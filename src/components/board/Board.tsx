@@ -20,6 +20,7 @@ import { useJobTrackStore } from "@/lib/store";
 import type { Application, Stage, Performance } from "@/lib/types";
 import { Column } from "./Column";
 import { Card } from "./Card";
+import { MobileCard } from "./MobileCard";
 import { CardDrawer } from "@/components/card/CardDrawer";
 import { CardForm } from "@/components/card/CardForm";
 import { InterviewLogModal } from "@/components/card/InterviewLogModal";
@@ -36,9 +37,36 @@ const BOARD_STAGES: Stage[] = [
   "offer",
 ];
 
+// 移动端筛选选项
+const MOBILE_FILTERS: { key: Stage | "all" | "ended"; label: string }[] = [
+  { key: "all", label: "全部" },
+  { key: "applied", label: "已投递" },
+  { key: "written", label: "笔试" },
+  { key: "interview1", label: "一面" },
+  { key: "interview2", label: "二面" },
+  { key: "final", label: "终面" },
+  { key: "offer", label: "Offer" },
+  { key: "ended", label: "已结束" },
+];
+
 // 需要弹出复盘表单的阶段
 const INTERVIEW_STAGES: Stage[] = ["interview1", "interview2", "final"];
 const ENDED_STAGES: Stage[] = ["rejected", "withdrawn"];
+
+// 获取阶段标签
+function getStageLabel(stage: Stage): string {
+  const labels: Record<Stage, string> = {
+    applied: "已投递",
+    written: "笔试",
+    interview1: "初面",
+    interview2: "二面",
+    final: "终面",
+    offer: "Offer",
+    rejected: "已拒绝",
+    withdrawn: "已撤回",
+  };
+  return labels[stage] || stage;
+}
 
 export function Board() {
   const applications = useJobTrackStore((state) => state.applications);
@@ -50,6 +78,7 @@ export function Board() {
   const [showEnded, setShowEnded] = useState(false);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [mobileFilter, setMobileFilter] = useState<Stage | "all" | "ended">("all");
 
   // 复盘表单状态
   const [pendingMove, setPendingMove] = useState<{
@@ -97,7 +126,7 @@ export function Board() {
     ? applications.find((app) => app.id === activeId)
     : null;
 
-  // 按阶段分组应用 — 用 useMemo 稳定引用，避免 Column 因 selectedApp 变化而重渲染
+  // 按阶段分组应用 — 用 useMemo 稳定引用
   const byStage = useMemo(() => {
     const allStages: Stage[] = [...BOARD_STAGES, "rejected", "withdrawn"];
     const map = {} as Record<Stage, Application[]>;
@@ -112,10 +141,22 @@ export function Board() {
   // 兼容旧调用方式（handleDragEnd 内部用）
   const getByStage = (stage: Stage) => byStage[stage] ?? [];
 
-  // 稳定的卡片点击回调，避免 Column 因回调引用变化而重渲染
+  // 稳定的卡片点击回调
   const handleCardClick = useCallback((app: Application) => {
     setSelectedApp(app);
   }, []);
+
+  // 移动端筛选后的卡片列表
+  const filteredMobileApps = useMemo(() => {
+    if (mobileFilter === "all") {
+      // 显示进行中的阶段
+      return BOARD_STAGES.flatMap((stage) => byStage[stage] ?? []);
+    } else if (mobileFilter === "ended") {
+      return [...(byStage["rejected"] ?? []), ...(byStage["withdrawn"] ?? [])];
+    } else {
+      return byStage[mobileFilter] ?? [];
+    }
+  }, [mobileFilter, byStage]);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -243,8 +284,66 @@ export function Board() {
     }
   };
 
-  return (
-    <div className="flex gap-6 overflow-x-auto pb-4">
+  // ==================== 移动端视图 ====================
+  const MobileBoardView = () => (
+    <div className="md:hidden">
+      {/* 横向滚动的 Chip 筛选器 */}
+      <div className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+        {MOBILE_FILTERS.map((filter) => {
+          const count = filter.key === "all"
+            ? applications.filter((a) => !["rejected", "withdrawn"].includes(a.stage)).length
+            : filter.key === "ended"
+            ? (byStage["rejected"]?.length ?? 0) + (byStage["withdrawn"]?.length ?? 0)
+            : (byStage[filter.key as Stage]?.length ?? 0);
+
+          return (
+            <button
+              key={filter.key}
+              onClick={() => setMobileFilter(filter.key)}
+              className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+                whitespace-nowrap transition-colors duration-200
+                ${mobileFilter === filter.key
+                  ? "bg-primary text-white"
+                  : "bg-white border border-border text-text-secondary hover:border-text-muted"
+                }
+              `}
+            >
+              {filter.label}
+              {count > 0 && (
+                <span className={`
+                  text-xs ${mobileFilter === filter.key ? "text-white/80" : "text-text-muted"}
+                `}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 垂直卡片列表 */}
+      <div className="space-y-3">
+        {filteredMobileApps.length > 0 ? (
+          filteredMobileApps.map((app) => (
+            <MobileCard
+              key={app.id}
+              application={app}
+              onClick={() => handleCardClick(app)}
+            />
+          ))
+        ) : (
+          <div className="text-center py-8 text-text-muted text-sm">
+            暂无申请
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ==================== 桌面端视图 ====================
+  const DesktopBoardView = () => (
+    <div className="hidden md:flex gap-6 overflow-x-auto pb-4">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -301,27 +400,26 @@ export function Board() {
           ) : null}
         </DragOverlay>
       </DndContext>
+    </div>
+  );
 
-      {/* Card Detail Drawer */}
+  return (
+    <>
+      {/* 移动端视图 */}
+      <MobileBoardView />
+
+      {/* 桌面端视图 */}
+      <DesktopBoardView />
+
+      {/* Card Detail Drawer - 响应式 */}
       <CardDrawer
         application={selectedApp}
         onClose={() => setSelectedApp(null)}
       />
 
-      {/* New Application Form */}
+      {/* New Application Form - 响应式 */}
       {showNewForm && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/10 z-40"
-            onClick={() => setShowNewForm(false)}
-          />
-          <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-xl z-50">
-            <CardForm
-              onClose={() => setShowNewForm(false)}
-              onSave={() => setShowNewForm(false)}
-            />
-          </div>
-        </>
+        <NewApplicationModal onClose={() => setShowNewForm(false)} />
       )}
 
       {/* Interview Log Modal */}
@@ -337,21 +435,41 @@ export function Board() {
       {showCelebration && (
         <Celebration onComplete={() => setShowCelebration(false)} />
       )}
-    </div>
+    </>
   );
 }
 
-// Helper function to get stage label for interview log
-function getStageLabel(stage: Stage): string {
-  const labels: Record<Stage, string> = {
-    applied: "已投递",
-    written: "笔试",
-    interview1: "初面",
-    interview2: "二面",
-    final: "终面",
-    offer: "Offer",
-    rejected: "已拒绝",
-    withdrawn: "已撤回",
-  };
-  return labels[stage] || stage;
+// 新建申请弹窗 - 响应式（桌面右侧抽屉，移动端全屏）
+function NewApplicationModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/10 z-40 md:hidden"
+        onClick={onClose}
+      />
+      {/* 移动端全屏 */}
+      <div className="fixed inset-0 bg-white z-50 md:hidden overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-border px-4 h-11 flex items-center justify-between">
+          <span className="text-sm font-medium text-text-primary">新建申请</span>
+          <button
+            onClick={onClose}
+            className="text-text-secondary hover:text-text-primary"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="p-4">
+          <CardForm onClose={onClose} onSave={onClose} />
+        </div>
+      </div>
+      {/* 桌面端右侧抽屉 */}
+      <div
+        className="fixed inset-0 bg-black/10 z-40 hidden md:block"
+        onClick={onClose}
+      />
+      <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-xl z-50 hidden md:block">
+        <CardForm onClose={onClose} onSave={onClose} />
+      </div>
+    </>
+  );
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 import type { Application, Platform, Stage } from "@/lib/types";
 import { STAGE_CONFIG, PLATFORM_LABELS } from "@/lib/types";
 import { useJobTrackStore } from "@/lib/store";
 
 interface CardFormProps {
-  application?: Application; // If provided, we're editing; otherwise creating
+  application?: Application;
   onClose: () => void;
   onSave?: () => void;
 }
@@ -32,6 +32,9 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
     resumeVersion: application?.resumeVersion || "",
     notes: application?.notes || "",
   });
+
+  // 移动端"更多"字段折叠状态
+  const [showMore, setShowMore] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,8 +86,8 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-border">
+      {/* Header - desktop only */}
+      <div className="hidden md:flex items-center justify-between p-6 border-b border-border">
         <h2 className="text-lg font-semibold text-text-primary">
           {isEditing ? "编辑申请" : "新增申请"}
         </h2>
@@ -98,14 +101,14 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
       </div>
 
       {/* Form Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
         {/* 公司名 */}
         <FormField label="公司名" required error={errors.company}>
           <input
             type="text"
             value={form.company}
             onChange={(e) => updateField("company", e.target.value)}
-            placeholder="例如：某头部电商"
+            placeholder="例如：字节跳动"
             className={inputClass(!!errors.company)}
           />
         </FormField>
@@ -116,24 +119,9 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
             type="text"
             value={form.position}
             onChange={(e) => updateField("position", e.target.value)}
-            placeholder="例如：产品经理-交易方向"
+            placeholder="例如：产品经理-电商方向"
             className={inputClass(!!errors.position)}
           />
-        </FormField>
-
-        {/* 投递渠道 */}
-        <FormField label="投递渠道">
-          <select
-            value={form.platform}
-            onChange={(e) => updateField("platform", e.target.value)}
-            className={inputClass()}
-          >
-            {Object.entries(PLATFORM_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
         </FormField>
 
         {/* 当前阶段 */}
@@ -171,62 +159,154 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
           />
         </FormField>
 
-        {/* 下一步截止 */}
-        <FormField label="下一步截止">
-          <input
-            type="date"
-            value={form.nextDeadline}
-            onChange={(e) => updateField("nextDeadline", e.target.value)}
-            className={inputClass()}
-          />
-        </FormField>
+        {/* 移动端：更多字段折叠 */}
+        <div className="md:hidden">
+          <button
+            type="button"
+            onClick={() => setShowMore(!showMore)}
+            className="flex items-center justify-between w-full py-2 text-sm text-text-secondary hover:text-text-primary"
+          >
+            <span>更多选项</span>
+            {showMore ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </button>
 
-        {/* 下一步做什么 */}
-        <FormField label="下一步做什么">
-          <input
-            type="text"
-            value={form.nextAction}
-            onChange={(e) => updateField("nextAction", e.target.value)}
-            placeholder="例如：准备二面案例"
-            className={inputClass()}
-          />
-        </FormField>
+          {showMore && (
+            <div className="space-y-5 pt-2">
+              {/* 投递渠道 */}
+              <FormField label="投递渠道">
+                <select
+                  value={form.platform}
+                  onChange={(e) => updateField("platform", e.target.value)}
+                  className={inputClass()}
+                >
+                  {Object.entries(PLATFORM_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
 
-        {/* 简历版本 */}
-        <FormField label="简历版本">
-          <input
-            type="text"
-            value={form.resumeVersion}
-            onChange={(e) => updateField("resumeVersion", e.target.value)}
-            placeholder="例如：V2.1-电商方向"
-            className={inputClass()}
-          />
-        </FormField>
+              {/* 下一步截止 */}
+              <FormField label="下一步截止">
+                <input
+                  type="date"
+                  value={form.nextDeadline}
+                  onChange={(e) => updateField("nextDeadline", e.target.value)}
+                  className={inputClass()}
+                />
+              </FormField>
 
-        {/* 备注 */}
-        <FormField label="备注">
-          <textarea
-            value={form.notes}
-            onChange={(e) => updateField("notes", e.target.value)}
-            placeholder="记录一些关于这家公司的信息..."
-            rows={3}
-            className={`${inputClass()} resize-none`}
-          />
-        </FormField>
+              {/* 下一步做什么 */}
+              <FormField label="下一步做什么">
+                <input
+                  type="text"
+                  value={form.nextAction}
+                  onChange={(e) => updateField("nextAction", e.target.value)}
+                  placeholder="例如：准备二面案例"
+                  className={inputClass()}
+                />
+              </FormField>
+
+              {/* 简历版本 */}
+              <FormField label="简历版本">
+                <input
+                  type="text"
+                  value={form.resumeVersion}
+                  onChange={(e) => updateField("resumeVersion", e.target.value)}
+                  placeholder="例如：V2.1-电商方向"
+                  className={inputClass()}
+                />
+              </FormField>
+
+              {/* 备注 */}
+              <FormField label="备注">
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => updateField("notes", e.target.value)}
+                  placeholder="记录一些关于这家公司的信息..."
+                  rows={3}
+                  className={`${inputClass()} resize-none`}
+                />
+              </FormField>
+            </div>
+          )}
+        </div>
+
+        {/* 桌面端：完整表单 */}
+        <div className="hidden md:block space-y-5">
+          {/* 投递渠道 */}
+          <FormField label="投递渠道">
+            <select
+              value={form.platform}
+              onChange={(e) => updateField("platform", e.target.value)}
+              className={inputClass()}
+            >
+              {Object.entries(PLATFORM_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* 下一步截止 */}
+          <FormField label="下一步截止">
+            <input
+              type="date"
+              value={form.nextDeadline}
+              onChange={(e) => updateField("nextDeadline", e.target.value)}
+              className={inputClass()}
+            />
+          </FormField>
+
+          {/* 下一步做什么 */}
+          <FormField label="下一步做什么">
+            <input
+              type="text"
+              value={form.nextAction}
+              onChange={(e) => updateField("nextAction", e.target.value)}
+              placeholder="例如：准备二面案例"
+              className={inputClass()}
+            />
+          </FormField>
+
+          {/* 简历版本 */}
+          <FormField label="简历版本">
+            <input
+              type="text"
+              value={form.resumeVersion}
+              onChange={(e) => updateField("resumeVersion", e.target.value)}
+              placeholder="例如：V2.1-电商方向"
+              className={inputClass()}
+            />
+          </FormField>
+
+          {/* 备注 */}
+          <FormField label="备注">
+            <textarea
+              value={form.notes}
+              onChange={(e) => updateField("notes", e.target.value)}
+              placeholder="记录一些关于这家公司的信息..."
+              rows={3}
+              className={`${inputClass()} resize-none`}
+            />
+          </FormField>
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-background">
+      <div className="flex items-center justify-end gap-3 p-4 md:p-6 border-t border-border bg-background">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary bg-white border border-border rounded-md hover:bg-background transition-colors"
+          className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary bg-white border border-border rounded-md hover:bg-background transition-colors"
         >
           取消
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-sm text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+          className="px-4 py-2.5 text-sm text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
         >
           保存
         </button>
@@ -258,7 +338,7 @@ function FormField({ label, required, error, children }: FormFieldProps) {
 }
 
 function inputClass(hasError?: boolean) {
-  return `w-full px-3 py-2 text-sm bg-white border rounded-md transition-colors focus:outline-none focus:border-primary ${
+  return `w-full px-3 py-2.5 md:py-2 text-sm bg-white border rounded-md transition-colors focus:outline-none focus:border-primary ${
     hasError ? "border-danger" : "border-border hover:border-text-muted"
   }`;
 }
