@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -16,7 +17,7 @@ interface ColumnProps {
   onCardClick?: (app: Application) => void;
 }
 
-export function Column({ stage, applications, onCardClick }: ColumnProps) {
+export const Column = memo(function Column({ stage, applications, onCardClick }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage,
     data: { type: "column", stage },
@@ -111,4 +112,4 @@ export function Column({ stage, applications, onCardClick }: ColumnProps) {
       </div>
     </div>
   );
-}
+});

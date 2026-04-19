@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { Minus, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { useJobTrackStore } from "@/lib/store";
-import { calculateWeekReport, formatDiff } from "@/lib/weeklyReport";
+import { calculateWeekReport } from "@/lib/weeklyReport";
 
 export function WeeklyReport() {
   const applications = useJobTrackStore((state) => state.applications);
@@ -17,229 +19,419 @@ export function WeeklyReport() {
     );
   }
 
-  const appliedDiff = formatDiff(stats.appliedDiff);
-  const interviewsDiff = formatDiff(stats.interviewsDiff);
+  const hasUpcoming = stats.upcomingDeadlinesList.length > 0;
+  const noActivityThisWeek =
+    stats.applied === 0 &&
+    stats.interviews === 0 &&
+    stats.offers === 0 &&
+    stats.rejections === 0;
+
+  // 当前在途 StatCard 副文案
+  const activeSub =
+    stats.stageBreakdown.offer > 0
+      ? `${stats.stageBreakdown.offer} 个 Offer`
+      : stats.stageBreakdown.interview > 0
+      ? `${stats.stageBreakdown.interview} 家面试中`
+      : stats.stageBreakdown.written > 0
+      ? `${stats.stageBreakdown.written} 家笔试中`
+      : "持续跟进中";
 
   return (
-    <div className="max-w-[680px] mx-auto">
-      {/* 信纸 */}
-      <div className="bg-white rounded-xl border border-border shadow-sm">
-        {/* 装饰性 SVG */}
-        <div className="px-12 pt-8 pb-4">
-          <PlantSVG />
+    <div className="max-w-[760px] mx-auto">
+      {/* ── 页头 ─────────────────────────────────────────────── */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="inline-flex items-center text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+            第 {stats.weekNumber} 周
+          </span>
+          {stats.totalDays > 0 && (
+            <span className="text-xs text-text-muted">求职第 {stats.totalDays} 天</span>
+          )}
         </div>
+        <h1 className="text-xl font-semibold text-text-primary">
+          {stats.dateRange.start} — {stats.dateRange.end}
+        </h1>
+      </div>
 
-        {/* 标题 */}
-        <div className="px-12 pb-6 text-center border-b border-border">
-          <h1 className="text-xl font-semibold text-text-primary mb-1">
-            第 {stats.weekNumber} 周周报
-          </h1>
-          <p className="text-sm text-text-secondary">
-            {stats.dateRange.start} - {stats.dateRange.end}
-          </p>
-        </div>
+      {/* ── 指标卡 ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <StatCard
+          label="本周投递"
+          value={stats.applied}
+          diff={stats.appliedDiff}
+        />
+        <StatCard
+          label="本周面试"
+          value={stats.interviews}
+          diff={stats.interviewsDiff}
+          valueColor="#5E6AD2"
+        />
+        <StatCard
+          label="当前在途"
+          value={stats.totalActive}
+          sub={activeSub}
+        />
+      </div>
 
-        {/* 内容 */}
-        <div className="px-12 py-8 space-y-8">
-          {/* 段落1: 本周概览 */}
-          <Section title="">
-            <p className="text-text-primary leading-relaxed">
-              这周
-              {stats.applied > 0 && (
-                <>你投递了 <Highlight>{stats.applied} 家</Highlight></>
-              )}
-              {stats.applied > 0 && stats.interviews > 0 && "，"}
-              {stats.interviews > 0 && (
-                <>完成了 <Highlight>{stats.interviews} 场面试</Highlight></>
-              )}
-              {(stats.applied > 0 || stats.interviews > 0) && stats.offers > 0 && "，"}
-              {stats.offers > 0 && (
-                <>拿到了 <Highlight type="green">{stats.offers} 个 Offer</Highlight></>
-              )}
-              {stats.applied === 0 && stats.interviews === 0 && stats.offers === 0 && (
-                <>这周还没有新的进展</>
-              )}
-              。
-            </p>
-          </Section>
+      {/* ── 主内容卡片 ───────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
 
-          {/* 段落2: 进度对比 */}
-          <Section title="和上周相比">
-            <div className="space-y-2">
-              <DiffRow
-                label="投递数"
-                diff={appliedDiff}
-                icon={stats.appliedDiff >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-              />
-              <DiffRow
-                label="面试数"
-                diff={interviewsDiff}
-                icon={stats.interviewsDiff >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-              />
-            </div>
-          </Section>
+        {/* 本周动态 */}
+        <section className="px-8 py-6 border-b border-border">
+          <SectionLabel>本周动态</SectionLabel>
 
-          {/* 段落3: 亮点时刻 */}
-          <Section title="本周最好的事">
-            {stats.newOffers.length > 0 ? (
-              <ul className="space-y-2">
-                {stats.newOffers.map((offer, i) => (
-                  <li key={i} className="text-text-primary">
-                    你拿到了<span className="font-medium">{offer.company}</span> 的 Offer
-                  </li>
-                ))}
-              </ul>
-            ) : stats.recentAdvances.length > 0 ? (
-              <ul className="space-y-2">
-                {stats.recentAdvances.slice(0, 2).map((advance, i) => (
-                  <li key={i} className="text-text-primary">
-                    <span className="font-medium">{advance.company}</span> 进到了 {advance.to}
-                  </li>
-                ))}
-              </ul>
+          <p className="text-sm text-text-primary leading-relaxed mb-4">
+            {noActivityThisWeek ? (
+              <>
+                这周暂时没有新的进展
+                {stats.totalActive > 0 && (
+                  <>
+                    ，但你还有{" "}
+                    <span className="font-semibold">{stats.totalActive} 家</span>{" "}
+                    在途中
+                  </>
+                )}
+                。保持节奏就好。
+              </>
             ) : (
-              <p className="text-text-secondary italic">
+              <>
+                这周
+                {stats.applied > 0 && (
+                  <>
+                    你投递了{" "}
+                    <span className="font-semibold">{stats.applied} 家</span>
+                  </>
+                )}
+                {stats.applied > 0 &&
+                  (stats.interviews > 0 || stats.offers > 0 || stats.rejections > 0) &&
+                  "，"}
+                {stats.interviews > 0 && (
+                  <>
+                    完成了{" "}
+                    <span className="font-semibold text-primary">
+                      {stats.interviews} 场面试
+                    </span>
+                  </>
+                )}
+                {stats.interviews > 0 && (stats.offers > 0 || stats.rejections > 0) && "，"}
+                {stats.offers > 0 && (
+                  <>
+                    拿到了{" "}
+                    <span className="font-semibold text-[#059669]">
+                      {stats.offers} 个 Offer
+                    </span>
+                  </>
+                )}
+                {stats.offers > 0 && stats.rejections > 0 && "，"}
+                {stats.rejections > 0 && (
+                  <>
+                    有{" "}
+                    <span className="text-text-secondary">{stats.rejections} 家</span>
+                    没有继续
+                  </>
+                )}
+                。
+              </>
+            )}
+          </p>
+
+          {/* 本周亮点 callout */}
+          {stats.newOffers.length > 0 ? (
+            <Callout accentColor="#059669" label="本周最好的事">
+              {stats.newOffers.map((o, i) => (
+                <p key={i} className="text-sm text-text-primary">
+                  <span className="font-medium">{o.company}</span> 的 Offer 到手了
+                </p>
+              ))}
+            </Callout>
+          ) : stats.recentAdvances.length > 0 ? (
+            <Callout accentColor="#5E6AD2" label="本周最好的事">
+              {stats.recentAdvances.slice(0, 2).map((a, i) => (
+                <p key={i} className="text-sm text-text-primary">
+                  <span className="font-medium">{a.company}</span>{" "}
+                  <span className="text-text-secondary">进到了</span>{" "}
+                  <span className="font-medium text-primary">{a.to}</span>
+                </p>
+              ))}
+            </Callout>
+          ) : (
+            <Callout accentColor="#E6E8EB" label="">
+              <p className="text-sm text-text-secondary italic">
                 你坚持了一周，这本身就值得肯定
               </p>
-            )}
-          </Section>
+            </Callout>
+          )}
+        </section>
 
-          {/* 段落4: 下周预告 */}
-          <Section title="下周预告">
-            {stats.upcomingInterviews > 0 ? (
-              <p className="text-text-primary">
-                下周有 <Highlight type="purple">{stats.upcomingInterviews} 场面试</Highlight> 等着你
-              </p>
-            ) : stats.nextWeekHasEvents ? (
-              <p className="text-text-primary">下周有其他安排，记得关注截止日期</p>
-            ) : (
-              <p className="text-text-secondary">
-                下周目前没有安排，可以为自己规划一些事
-              </p>
-            )}
-          </Section>
-
-          {/* 段落5: 一句话寄语 */}
-          <div className="pt-4 border-t border-border">
-            <p className="text-center text-sm text-text-secondary italic leading-relaxed">
-              {stats.closingMessage}
-            </p>
+        {/* 和上周相比 + 在途分布 */}
+        <section className="grid grid-cols-2 divide-x divide-border border-b border-border">
+          <div className="px-8 py-6">
+            <SectionLabel>和上周相比</SectionLabel>
+            <div className="space-y-4 mt-1">
+              <CompRow
+                label="投递"
+                current={stats.applied}
+                diff={stats.appliedDiff}
+              />
+              <CompRow
+                label="面试"
+                current={stats.interviews}
+                diff={stats.interviewsDiff}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* 底部留白 */}
-        <div className="px-12 pb-8" />
+          <div className="px-8 py-6">
+            <SectionLabel>在途分布</SectionLabel>
+            <StageDistribution breakdown={stats.stageBreakdown} />
+          </div>
+        </section>
+
+        {/* 下周预告 */}
+        {hasUpcoming && (
+          <section className="px-8 py-6 border-b border-border">
+            <SectionLabel>下周预告</SectionLabel>
+            <div className="space-y-3 mt-1">
+              {stats.upcomingDeadlinesList.map((item, i) => (
+                <UpcomingItem key={i} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 寄语 */}
+        <section className="px-8 py-6">
+          <p className="text-center text-sm text-text-secondary italic leading-relaxed">
+            {stats.closingMessage}
+          </p>
+        </section>
       </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// ─── 子组件 ──────────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-3">
-      {title && (
-        <p className="text-xs text-text-muted uppercase tracking-wide">{title}</p>
-      )}
-      <div className="text-sm leading-relaxed">{children}</div>
+    <p className="text-2xs text-text-muted uppercase tracking-wide mb-3">
+      {children}
+    </p>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  diff,
+  sub,
+  valueColor,
+}: {
+  label: string;
+  value: number;
+  diff?: number;
+  sub?: string;
+  valueColor?: string;
+}) {
+  const hasDiff = diff !== undefined;
+  const isPositive = (diff ?? 0) > 0;
+  const isNeutral = (diff ?? 0) === 0;
+
+  return (
+    <div className="bg-white rounded-xl border border-border shadow-sm px-5 py-4">
+      <p className="text-xs text-text-muted mb-2">{label}</p>
+      <p
+        className="text-xl font-semibold leading-tight mb-1.5"
+        style={{ color: valueColor ?? "#1C1D1F" }}
+      >
+        {value}
+      </p>
+      {hasDiff ? (
+        <div className="flex items-center gap-1 text-xs">
+          {isNeutral ? (
+            <span className="text-text-muted flex items-center gap-0.5">
+              <Minus size={11} />
+              与上周持平
+            </span>
+          ) : isPositive ? (
+            <span className="text-[#059669] flex items-center gap-0.5">
+              <ArrowUp size={11} />
+              比上周多 {diff}
+            </span>
+          ) : (
+            <span className="text-danger flex items-center gap-0.5">
+              <ArrowDown size={11} />
+              比上周少 {Math.abs(diff!)}
+            </span>
+          )}
+        </div>
+      ) : sub ? (
+        <p className="text-xs text-text-muted">{sub}</p>
+      ) : null}
     </div>
   );
 }
 
-function Highlight({ children, type = "default" }: { children: React.ReactNode; type?: "default" | "green" | "purple" }) {
-  const colors = {
-    default: "text-primary",
-    green: "text-[#059669]",
-    purple: "text-[#7C3AED]",
-  };
-  return <span className={`font-medium ${colors[type]}`}>{children}</span>;
+function Callout({
+  accentColor,
+  label,
+  children,
+}: {
+  accentColor: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="bg-background rounded-lg px-4 py-3 border-l-[3px]"
+      style={{ borderLeftColor: accentColor }}
+    >
+      {label && (
+        <p className="text-2xs text-text-muted uppercase tracking-wide mb-1.5">{label}</p>
+      )}
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
 }
 
-function DiffRow({
+function CompRow({
   label,
+  current,
   diff,
-  icon,
 }: {
   label: string;
-  diff: { text: string; isPositive: boolean };
-  icon: React.ReactNode;
+  current: number;
+  diff: number;
 }) {
-  const color = diff.isPositive ? "text-[#059669]" : "text-danger";
+  const isNeutral = diff === 0;
+  const isPositive = diff > 0;
+
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className="text-text-secondary w-16">{label}</span>
-      <span className={`flex items-center gap-1 ${color}`}>
-        {diff.text === "0" ? (
-          <Minus size={14} className="text-text-muted" />
-        ) : (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-text-secondary">{label}</span>
+      <div className="flex items-center gap-3">
+        <span className="text-lg font-semibold text-text-primary tabular-nums">
+          {current}
+        </span>
+        <span
+          className={`flex items-center gap-0.5 text-xs w-14 ${
+            isNeutral
+              ? "text-text-muted"
+              : isPositive
+              ? "text-[#059669]"
+              : "text-danger"
+          }`}
+        >
+          {isNeutral ? (
+            <>
+              <Minus size={11} />
+              <span>持平</span>
+            </>
+          ) : isPositive ? (
+            <>
+              <ArrowUp size={11} />
+              <span>+{diff}</span>
+            </>
+          ) : (
+            <>
+              <ArrowDown size={11} />
+              <span>{diff}</span>
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const STAGE_ITEMS = [
+  { key: "applied" as const, label: "已投递", color: "#6F7177" },
+  { key: "written" as const, label: "笔试中", color: "#D97706" },
+  { key: "interview" as const, label: "面试中", color: "#5E6AD2" },
+  { key: "offer" as const, label: "Offer", color: "#059669" },
+];
+
+function StageDistribution({
+  breakdown,
+}: {
+  breakdown: { applied: number; written: number; interview: number; offer: number };
+}) {
+  const entries = STAGE_ITEMS.map((s) => ({
+    ...s,
+    count: breakdown[s.key],
+  })).filter((e) => e.count > 0);
+
+  const max = Math.max(...entries.map((e) => e.count), 1);
+
+  if (entries.length === 0) {
+    return (
+      <p className="text-xs text-text-muted mt-1">暂无在途申请</p>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5 mt-1">
+      {entries.map((entry) => (
+        <div key={entry.key} className="flex items-center gap-3">
+          <span className="text-xs text-text-secondary w-10 shrink-0">
+            {entry.label}
+          </span>
+          <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${(entry.count / max) * 100}%`,
+                backgroundColor: entry.color,
+              }}
+            />
+          </div>
+          <span className="text-xs font-medium text-text-primary tabular-nums w-4 text-right shrink-0">
+            {entry.count}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UpcomingItem({
+  item,
+}: {
+  item: { company: string; action: string; date: Date };
+}) {
+  const dayLabel = format(item.date, "EEE", { locale: zhCN }); // 周二
+  const dateLabel = format(item.date, "M月d日", { locale: zhCN }); // 4月22日
+
+  return (
+    <div className="flex items-center gap-4 text-sm">
+      <div className="shrink-0 w-24">
+        <span className="font-medium text-text-primary">{dayLabel}</span>
+        <span className="text-text-muted ml-1.5 text-xs">{dateLabel}</span>
+      </div>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="font-medium text-text-primary truncate">{item.company}</span>
+        {item.action && (
           <>
-            {icon}
-            {diff.text}
+            <span className="text-border">·</span>
+            <span className="text-text-secondary truncate">{item.action}</span>
           </>
         )}
-      </span>
+      </div>
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="text-center py-12">
-      <p className="text-sm text-text-secondary mb-6">
-        这一周还没开始记录，第一条从现在开始
-      </p>
-      <button
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent("open-new-application"));
-        }}
-        className="px-4 py-2 text-sm text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+    <div className="text-center">
+      <p className="text-sm text-text-secondary mb-2">还没有任何申请记录</p>
+      <p className="text-xs text-text-muted mb-6">去看板添加第一条，这里会自动生成你的周报</p>
+      <a
+        href="/board"
+        className="inline-flex items-center px-4 py-2 text-sm text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
       >
-        新建申请
-      </button>
+        去看板记录
+      </a>
     </div>
-  );
-}
-
-function PlantSVG() {
-  return (
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 48 48"
-      fill="none"
-      className="text-text-muted"
-    >
-      {/* 花盆 */}
-      <path
-        d="M16 36h16l2 8H14l2-8z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      {/* 茎 */}
-      <path
-        d="M24 36V20"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {/* 叶子左 */}
-      <path
-        d="M24 28c-6-2-10 0-12 4s2 8 12 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      {/* 叶子右 */}
-      <path
-        d="M24 24c6-2 10 0 12 4s-2 8-12 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      {/* 花 */}
-      <circle cx="24" cy="16" r="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-    </svg>
   );
 }

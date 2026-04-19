@@ -7,6 +7,7 @@ import { isSameDay } from "date-fns";
 import { MonthView } from "./MonthView";
 import { ConflictBanner } from "./ConflictBanner";
 import { DayDetail } from "./DayDetail";
+import { CardDrawer } from "@/components/card/CardDrawer";
 import type { Application } from "@/lib/types";
 
 export function CalendarPageClient() {
@@ -17,6 +18,7 @@ export function CalendarPageClient() {
   const [selectedEvents, setSelectedEvents] = useState<Application[]>([]);
   const [showConflictBanner, setShowConflictBanner] = useState(true);
   const [showDayDetail, setShowDayDetail] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
   const handleDayClick = (date: Date, events: Application[]) => {
     setSelectedDate(date);
@@ -42,6 +44,11 @@ export function CalendarPageClient() {
     return conflicts.find((c) => isSameDay(new Date(c.date), date))?.applications || [];
   };
 
+  const handleCardClick = (app: Application) => {
+    setShowDayDetail(false);
+    setSelectedApp(app);
+  };
+
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
       {/* Conflict Banner */}
@@ -64,8 +71,15 @@ export function CalendarPageClient() {
           applications={selectedEvents}
           conflicts={getConflictsForDay(selectedDate)}
           onClose={() => setShowDayDetail(false)}
+          onCardClick={handleCardClick}
         />
       )}
+
+      {/* Application Detail Drawer */}
+      <CardDrawer
+        application={selectedApp}
+        onClose={() => setSelectedApp(null)}
+      />
     </div>
   );
 }

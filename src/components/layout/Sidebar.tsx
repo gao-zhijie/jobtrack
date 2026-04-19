@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, Calendar, BarChart3, Info } from "lucide-react";
@@ -14,18 +13,9 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <aside
-      className={`
-        flex flex-col h-full bg-white border-r border-border
-        transition-all duration-200 ease-out
-        ${isHovered ? "w-[200px]" : "w-16"}
-      `}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <aside className="flex flex-col h-full bg-white border-r border-border w-[200px]">
       {/* Logo area */}
       <div className="h-14 flex items-center px-4 border-b border-border">
         <div className="flex items-center gap-2">
@@ -47,11 +37,9 @@ export function Sidebar() {
               fill="#5E6AD2"
             />
           </svg>
-          {isHovered && (
-            <span className="text-base font-semibold text-text-primary tracking-tight whitespace-nowrap">
-              JobTrack
-            </span>
-          )}
+          <span className="text-base font-semibold text-text-primary tracking-tight whitespace-nowrap">
+            JobTrack
+          </span>
         </div>
       </div>
 
@@ -91,16 +79,14 @@ export function Sidebar() {
               </div>
 
               {/* Label */}
-              {isHovered && (
-                <span
-                  className={`
-                    text-sm whitespace-nowrap
-                    ${isActive ? "font-medium text-primary" : "text-text-secondary"}
-                  `}
-                >
-                  {item.label}
-                </span>
-              )}
+              <span
+                className={`
+                  text-sm whitespace-nowrap
+                  ${isActive ? "font-medium text-primary" : "text-text-secondary"}
+                `}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

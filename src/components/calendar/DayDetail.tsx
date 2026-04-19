@@ -11,9 +11,10 @@ interface DayDetailProps {
   applications: Application[];
   conflicts: Application[];
   onClose: () => void;
+  onCardClick: (app: Application) => void;
 }
 
-export function DayDetail({ date, applications, conflicts, onClose }: DayDetailProps) {
+export function DayDetail({ date, applications, conflicts, onClose, onCardClick }: DayDetailProps) {
   // 计算当天总事件数（面试记录 + 截止日期）
   const totalEvents = applications.reduce((count, app) => {
     const interviewCount = app.interviewLogs.filter(
@@ -116,7 +117,8 @@ export function DayDetail({ date, applications, conflicts, onClose }: DayDetailP
                 return (
                   <div
                     key={app.id}
-                    className="border border-border rounded-lg p-3 hover:bg-background transition-colors"
+                    onClick={() => onCardClick(app)}
+                    className="border border-border rounded-lg p-3 hover:bg-background hover:shadow-sm transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>

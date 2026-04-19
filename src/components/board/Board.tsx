@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -97,11 +97,25 @@ export function Board() {
     ? applications.find((app) => app.id === activeId)
     : null;
 
-  // 按阶段分组应用
-  const getByStage = (stage: Stage) =>
-    applications
-      .filter((app) => app.stage === stage)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+  // 按阶段分组应用 — 用 useMemo 稳定引用，避免 Column 因 selectedApp 变化而重渲染
+  const byStage = useMemo(() => {
+    const allStages: Stage[] = [...BOARD_STAGES, "rejected", "withdrawn"];
+    const map = {} as Record<Stage, Application[]>;
+    for (const stage of allStages) {
+      map[stage] = applications
+        .filter((app) => app.stage === stage)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    return map;
+  }, [applications]);
+
+  // 兼容旧调用方式（handleDragEnd 内部用）
+  const getByStage = (stage: Stage) => byStage[stage] ?? [];
+
+  // 稳定的卡片点击回调，避免 Column 因回调引用变化而重渲染
+  const handleCardClick = useCallback((app: Application) => {
+    setSelectedApp(app);
+  }, []);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -144,10 +158,16 @@ export function Board() {
 
     // 如果跨列移动
     if (fromStage !== targetStage) {
-      // 检查是否需要弹出复盘表单
+      // 计算阶段在顺序数组中的索引，判断是前进还是后退
+      const fromIndex = BOARD_STAGES.indexOf(fromStage as Stage);
+      const toIndex = BOARD_STAGES.indexOf(targetStage);
+      const isForward = toIndex > fromIndex;
+
+      // 只有前进（往后一个阶段）才弹出复盘表单，后退不弹
       const needsReflection =
-        (INTERVIEW_STAGES.includes(targetStage) && fromStage !== "applied") ||
-        ENDED_STAGES.includes(targetStage);
+        isForward &&
+        ((INTERVIEW_STAGES.includes(targetStage) && fromStage !== "applied") ||
+          ENDED_STAGES.includes(targetStage));
 
       if (needsReflection) {
         // 保存待处理移动，弹出复盘表单
@@ -236,8 +256,8 @@ export function Board() {
           <Column
             key={stage}
             stage={stage}
-            applications={getByStage(stage)}
-            onCardClick={setSelectedApp}
+            applications={byStage[stage] ?? []}
+            onCardClick={handleCardClick}
           />
         ))}
 
@@ -257,7 +277,7 @@ export function Board() {
             </span>
             已结束
             <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium bg-text-muted/20 text-text-muted">
-              {getByStage("rejected").length + getByStage("withdrawn").length}
+              {(byStage["rejected"]?.length ?? 0) + (byStage["withdrawn"]?.length ?? 0)}
             </span>
           </button>
 
@@ -265,8 +285,8 @@ export function Board() {
             <div className="mt-2">
               <Column
                 stage="rejected"
-                applications={getByStage("rejected")}
-                onCardClick={setSelectedApp}
+                applications={byStage["rejected"] ?? []}
+                onCardClick={handleCardClick}
               />
             </div>
           )}
