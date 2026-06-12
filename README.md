@@ -2,6 +2,8 @@
 
 > 不是一个更好的求职表格，是陪用户走完求职季的伙伴。
 
+JobTrack 是一个从个人求职管理需求出发、计划长期维护的自用产品。它优先解决真实求职季里的记录、提醒、复盘和情绪压力问题，而不是把自己做成一个更复杂的通用表格。
+
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS?style=flat-square&logo=tailwindcss)
@@ -32,10 +34,11 @@
 
 | 设计原则 | 说明 |
 |---------|------|
-| 场景封装 | 对标 Keep 之于跑步，不和飞书/Notion 比功能 |
-| 主动性 | 产品主动提醒、归档、复盘，而非等用户填字段 |
+| 场景封装 | 聚焦求职季，不和飞书/Notion 比通用能力 |
+| 主动性 | 产品主动提醒、归档、复盘，而不是等用户填字段 |
 | 情绪设计 | 求职是高压场景，所有数字背后都要有"情绪化副文案" |
 | 开箱即用 | 30 秒上手，不给用户任何配置负担 |
+| 长期自用 | 先服务真实使用，再决定是否扩展成更完整的产品 |
 
 ---
 

@@ -209,7 +209,7 @@ export function MonthView({ onDayClick }: MonthViewProps) {
                 ))}
                 {events.length > 3 && (
                   <div className="text-xs text-text-muted px-1.5">
-                    +{events.length - 3} more
+                    还有 {events.length - 3} 项
                   </div>
                 )}
               </div>

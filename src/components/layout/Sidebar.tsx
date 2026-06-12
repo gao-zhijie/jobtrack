@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Calendar, BarChart3, Plus, MoreHorizontal } from "lucide-react";
+import { LayoutGrid, Calendar, BarChart3, Plus, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/board", label: "看板", icon: LayoutGrid },
   { href: "/calendar", label: "日历", icon: Calendar },
   { href: "/weekly", label: "周报", icon: BarChart3 },
-  { href: "/", label: "更多", icon: MoreHorizontal },
+  { href: "/settings", label: "设置", icon: Settings },
 ];
 
 export function Sidebar() {

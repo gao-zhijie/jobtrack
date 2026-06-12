@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -96,6 +97,19 @@ export function Board() {
     window.addEventListener("open-new-application", handleOpenNew);
     return () => window.removeEventListener("open-new-application", handleOpenNew);
   }, []);
+
+  // Listen for focus cards outside the board component.
+  useEffect(() => {
+    const handleOpenDetail = (event: Event) => {
+      const appId = (event as CustomEvent<{ appId?: string }>).detail?.appId;
+      if (!appId) return;
+      const app = applications.find((item) => item.id === appId);
+      if (app) setSelectedApp(app);
+    };
+
+    window.addEventListener("open-application-detail", handleOpenDetail);
+    return () => window.removeEventListener("open-application-detail", handleOpenDetail);
+  }, [applications]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -372,7 +386,7 @@ export function Board() {
                 ${showEnded ? "rotate-90" : ""}
               `}
             >
-              ▶
+              <ChevronRight size={14} />
             </span>
             已结束
             <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium bg-text-muted/20 text-text-muted">
@@ -405,11 +419,17 @@ export function Board() {
 
   return (
     <>
-      {/* 移动端视图 */}
-      <MobileBoardView />
+      {applications.length === 0 ? (
+        <EmptyBoardState onCreate={() => setShowNewForm(true)} />
+      ) : (
+        <>
+          {/* 移动端视图 */}
+          <MobileBoardView />
 
-      {/* 桌面端视图 */}
-      <DesktopBoardView />
+          {/* 桌面端视图 */}
+          <DesktopBoardView />
+        </>
+      )}
 
       {/* Card Detail Drawer - 响应式 */}
       <CardDrawer
@@ -439,6 +459,32 @@ export function Board() {
   );
 }
 
+function EmptyBoardState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="min-h-[360px] flex items-center justify-center">
+      <div className="w-full max-w-[420px] bg-white border border-border rounded-xl shadow-sm px-6 py-8 text-left">
+        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-3">
+          开始记录
+        </p>
+        <h2 className="text-xl font-semibold text-text-primary mb-3">
+          先放进第一条申请
+        </h2>
+        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+          JobTrack 会从真实记录开始陪你整理节奏。投递、截止、面试复盘和周报都会围绕这条申请自动长出来。
+        </p>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="btn btn-primary inline-flex items-center gap-1.5"
+        >
+          <Plus size={16} />
+          新增第一条申请
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // 新建申请弹窗 - 响应式（桌面右侧抽屉，移动端全屏）
 function NewApplicationModal({ onClose }: { onClose: () => void }) {
   return (
@@ -455,7 +501,7 @@ function NewApplicationModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="text-text-secondary hover:text-text-primary"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
         <div className="p-4">

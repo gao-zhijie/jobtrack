@@ -69,7 +69,7 @@ export function InterviewLogModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-[480px] max-h-[90vh] overflow-hidden">
+      <div className="relative bg-white rounded-xl shadow w-[480px] max-h-[90vh] overflow-hidden">
         {showBadMessage ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-danger/10 flex items-center justify-center">

@@ -5,6 +5,7 @@ import { X, ChevronDown, ChevronUp } from "lucide-react";
 import type { Application, Platform, Stage } from "@/lib/types";
 import { STAGE_CONFIG, PLATFORM_LABELS } from "@/lib/types";
 import { useJobTrackStore } from "@/lib/store";
+import { formatDateInputLocal, parseDateInputLocal } from "@/lib/date";
 
 interface CardFormProps {
   application?: Application;
@@ -23,10 +24,10 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
     platform: (application?.platform || "other") as Platform,
     stage: (application?.stage || "applied") as Stage,
     appliedAt: application?.appliedAt
-      ? new Date(application.appliedAt).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0],
+      ? formatDateInputLocal(application.appliedAt)
+      : formatDateInputLocal(new Date()),
     nextDeadline: application?.nextDeadline
-      ? new Date(application.nextDeadline).toISOString().split("T")[0]
+      ? formatDateInputLocal(application.nextDeadline)
       : "",
     nextAction: application?.nextAction || "",
     resumeVersion: application?.resumeVersion || "",
@@ -56,8 +57,8 @@ export function CardForm({ application, onClose, onSave }: CardFormProps) {
       platform: form.platform,
       stage: form.stage,
       sortOrder: Date.now(),
-      appliedAt: new Date(form.appliedAt),
-      nextDeadline: form.nextDeadline ? new Date(form.nextDeadline) : undefined,
+      appliedAt: parseDateInputLocal(form.appliedAt),
+      nextDeadline: form.nextDeadline ? parseDateInputLocal(form.nextDeadline) : undefined,
       nextAction: form.nextAction.trim() || undefined,
       resumeVersion: form.resumeVersion.trim() || undefined,
       notes: form.notes.trim() || undefined,

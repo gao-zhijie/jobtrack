@@ -140,11 +140,6 @@ function MiniKanban() {
           <span className="text-xs text-text-muted">等待回音中</span>
         </div>
       </div>
-
-      {/* 淡化背景装饰圆 */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-primary/4 -z-10"
-      />
     </div>
   );
 }
@@ -162,7 +157,7 @@ export default function AboutPage() {
 
       {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-border">
-        <div className="max-w-[1040px] mx-auto px-8 h-14 flex items-center justify-between">
+        <div className="max-w-[1040px] mx-auto px-4 sm:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <path d="M10 2L18 10L10 18L2 10L10 2Z" fill="#5E6AD2" fillOpacity="0.2" />
@@ -183,8 +178,8 @@ export default function AboutPage() {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="bg-white pt-36 pb-28 px-8">
-        <div className="max-w-[1040px] mx-auto grid grid-cols-[1fr_400px] gap-20 items-center">
+      <section className="bg-white pt-28 md:pt-36 pb-16 md:pb-28 px-4 sm:px-8">
+        <div className="max-w-[1040px] mx-auto grid md:grid-cols-[1fr_400px] gap-12 md:gap-20 items-center">
 
           {/* 左：文字 */}
           <div>
@@ -195,7 +190,7 @@ export default function AboutPage() {
               求职管理工具
             </p>
             <h1
-              className="text-[48px] font-semibold text-text-primary leading-[1.15] tracking-tight mb-5"
+              className="text-[40px] md:text-[48px] font-semibold text-text-primary leading-[1.15] tracking-tight mb-5"
               style={{ animation: "fade-in-up 0.5s ease-out 0.1s both" }}
             >
               不是一个更好<br />
@@ -208,7 +203,7 @@ export default function AboutPage() {
               是陪你走完求职季的伙伴。
             </p>
             <div
-              className="flex items-center gap-3"
+              className="flex flex-wrap items-center gap-3"
               style={{ animation: "fade-in-up 0.5s ease-out 0.3s both" }}
             >
               <Link
@@ -228,15 +223,18 @@ export default function AboutPage() {
           </div>
 
           {/* 右：Mini 看板 */}
-          <div style={{ animation: "fade-in-up 0.5s ease-out 0.35s both" }}>
+          <div
+            className="max-w-[400px] w-full mx-auto md:mx-0"
+            style={{ animation: "fade-in-up 0.5s ease-out 0.35s both" }}
+          >
             <MiniKanban />
           </div>
         </div>
       </section>
 
       {/* ── Stats strip ──────────────────────────────────────────────────── */}
-      <div className="bg-primary/[0.04] border-y border-primary/10 px-8 py-4">
-        <div className="max-w-[1040px] mx-auto flex items-center gap-12">
+      <div className="bg-primary/[0.04] border-y border-primary/10 px-4 sm:px-8 py-4">
+        <div className="max-w-[1040px] mx-auto flex flex-wrap items-center gap-x-8 gap-y-3">
           {[
             { num: "6", label: "求职流程阶段" },
             { num: "30s", label: "上手时间" },
@@ -254,7 +252,7 @@ export default function AboutPage() {
       </div>
 
       {/* ── Problems ─────────────────────────────────────────────────────── */}
-      <section className="bg-background px-8 py-24">
+      <section className="bg-background px-4 sm:px-8 py-20 md:py-24">
         <div
           ref={problems.ref}
           className={`max-w-[1040px] mx-auto transition-all duration-700 ease-out ${
@@ -268,7 +266,7 @@ export default function AboutPage() {
             {PROBLEMS.map((p, i) => (
               <div
                 key={p.num}
-                className="flex items-center gap-8 py-6 group"
+                className="flex items-start sm:items-center gap-5 sm:gap-8 py-6 group"
                 style={{
                   transitionDelay: `${i * 60}ms`,
                 }}
@@ -276,7 +274,7 @@ export default function AboutPage() {
                 <span className="text-xs font-medium text-text-muted w-6 shrink-0">
                   {p.num}
                 </span>
-                <p className="text-[22px] font-medium text-text-primary leading-snug group-hover:text-primary transition-colors duration-200">
+                <p className="text-xl md:text-[22px] font-medium text-text-primary leading-snug group-hover:text-primary transition-colors duration-200">
                   {p.text}
                 </p>
               </div>
@@ -286,7 +284,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Why Different ────────────────────────────────────────────────── */}
-      <section id="design" className="bg-white px-8 py-24">
+      <section id="design" className="bg-white px-4 sm:px-8 py-20 md:py-24">
         <div
           ref={compare.ref}
           className={`max-w-[1040px] mx-auto transition-all duration-700 ease-out ${
@@ -297,16 +295,16 @@ export default function AboutPage() {
             为什么不用飞书多维表格
           </p>
           <h2 className="text-[32px] font-semibold text-text-primary leading-tight mb-4">
-            通用工具的通用性，<br />
-            就是它的无能。
+            通用工具能记录很多事，<br />
+            但不会理解求职季。
           </h2>
           <p className="text-sm text-text-secondary leading-[1.8] mb-12 max-w-[520px]">
-            你当然可以用飞书搭建求职管理——很多人都这么做。
-            但你需要花 2 小时搭建字段，在连续被拒的夜晚
+            你当然可以用飞书搭建求职管理，很多人都这么做。
+            但你需要花 2 小时搭建字段，在连续被拒的夜晚，
             对着一张冷冰冰的表格发呆。
           </p>
 
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-background">
@@ -338,7 +336,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Features ─────────────────────────────────────────────────────── */}
-      <section className="bg-background px-8 py-24">
+      <section className="bg-background px-4 sm:px-8 py-20 md:py-24">
         <div
           ref={features.ref}
           className={`max-w-[1040px] mx-auto transition-all duration-700 ease-out ${
@@ -348,7 +346,7 @@ export default function AboutPage() {
           <p className="text-xs font-semibold text-text-muted uppercase tracking-[0.15em] mb-12">
             核心功能
           </p>
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid md:grid-cols-2 gap-5">
             {FEATURES.map((f) => (
               <div
                 key={f.num}
@@ -385,7 +383,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section className="bg-white px-8 py-24">
+      <section className="bg-white px-4 sm:px-8 py-20 md:py-24">
         <div
           ref={cta.ref}
           className={`max-w-[1040px] mx-auto transition-all duration-700 ease-out ${
@@ -394,10 +392,10 @@ export default function AboutPage() {
         >
           <h2 className="text-[36px] font-semibold text-text-primary leading-[1.2] mb-4">
             这不只是数据，<br />
-            是你人生第一次真正的战斗。
+            是你认真走过的求职季。
           </h2>
           <p className="text-base text-text-secondary mb-10">
-            值得有一个东西，陪你一起打完。
+            值得有一个东西，帮你记住节奏，也照顾状态。
           </p>
           <Link
             href="/board"
@@ -410,8 +408,8 @@ export default function AboutPage() {
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="bg-background border-t border-border px-8 py-8">
-        <div className="max-w-[1040px] mx-auto flex items-center justify-between">
+      <footer className="bg-background border-t border-border px-4 sm:px-8 py-8">
+        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
               <path d="M10 2L18 10L10 18L2 10L10 2Z" fill="#5E6AD2" fillOpacity="0.2" />

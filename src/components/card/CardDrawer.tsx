@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { X, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import type { Application, InterviewLog } from "@/lib/types";
+import type { ActivityLog, Application, InterviewLog } from "@/lib/types";
 import { STAGE_CONFIG, PLATFORM_LABELS, PERFORMANCE_LABELS } from "@/lib/types";
 import { useJobTrackStore } from "@/lib/store";
 import { CardForm } from "./CardForm";
@@ -22,6 +22,7 @@ export function CardDrawer({ application, onClose }: CardDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
   const deleteApplication = useJobTrackStore((s) => s.deleteApplication);
+  const activityLogs = useJobTrackStore((s) => s.activityLogs);
 
   // 移动端触摸拖拽关闭
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -48,6 +49,9 @@ export function CardDrawer({ application, onClose }: CardDrawerProps) {
 
   const stageConfig = STAGE_CONFIG.find((s) => s.key === application.stage);
   const daysSinceApplied = differenceInDays(new Date(), new Date(application.appliedAt));
+  const applicationActivityLogs = activityLogs
+    .filter((log) => log.applicationId === application.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const toggleLog = (id: string) => {
     const next = new Set(expandedLogs);
@@ -92,6 +96,7 @@ export function CardDrawer({ application, onClose }: CardDrawerProps) {
             daysSinceApplied={daysSinceApplied}
             showDeleteConfirm={showDeleteConfirm}
             expandedLogs={expandedLogs}
+            activityLogs={applicationActivityLogs}
             onEdit={() => setIsEditing(true)}
             onDelete={() => setShowDeleteConfirm(!showDeleteConfirm)}
             onClose={handleClose}
@@ -173,6 +178,7 @@ export function CardDrawer({ application, onClose }: CardDrawerProps) {
               stageConfig={stageConfig}
               daysSinceApplied={daysSinceApplied}
               expandedLogs={expandedLogs}
+              activityLogs={applicationActivityLogs}
               showDeleteConfirm={showDeleteConfirm}
               onToggleLog={toggleLog}
               onDelete={() => setShowDeleteConfirm(true)}
@@ -205,6 +211,7 @@ interface DrawerContentProps {
   daysSinceApplied: number;
   showDeleteConfirm: boolean;
   expandedLogs: Set<string>;
+  activityLogs: ActivityLog[];
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -219,6 +226,7 @@ function DrawerContent({
   daysSinceApplied,
   showDeleteConfirm,
   expandedLogs,
+  activityLogs,
   onEdit,
   onDelete,
   onClose,
@@ -366,6 +374,10 @@ function DrawerContent({
           </Field>
         )}
 
+        {activityLogs.length > 0 && (
+          <ActivityTimeline logs={activityLogs} />
+        )}
+
         {application.interviewLogs.length > 0 && (
           <InterviewLogsSection
             logs={application.interviewLogs}
@@ -384,6 +396,7 @@ function MobileDrawerContent({
   stageConfig,
   daysSinceApplied,
   expandedLogs,
+  activityLogs,
   showDeleteConfirm,
   onToggleLog,
   onDelete,
@@ -465,6 +478,10 @@ function MobileDrawerContent({
         </Field>
       )}
 
+      {activityLogs.length > 0 && (
+        <ActivityTimeline logs={activityLogs} />
+      )}
+
       {/* 删除按钮 */}
       <div className="pt-4 border-t border-border">
         {showDeleteConfirm ? (
@@ -504,6 +521,26 @@ function MobileDrawerContent({
         />
       )}
     </>
+  );
+}
+
+function ActivityTimeline({ logs }: { logs: ActivityLog[] }) {
+  return (
+    <Field label="状态足迹">
+      <div className="space-y-2">
+        {logs.slice(0, 6).map((log) => (
+          <div key={log.id} className="flex gap-3 text-sm">
+            <div className="mt-2 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-text-primary">{log.summary || "更新了申请状态"}</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                {new Date(log.createdAt).toLocaleString("zh-CN")}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Field>
   );
 }
 
