@@ -53,6 +53,42 @@ export interface Application {
   updatedAt: Date;
 }
 
+/** 申请活动历史 */
+export type ActivityLogType =
+  | "created"
+  | "updated"
+  | "stage_changed"
+  | "interview_added"
+  | "archived"
+  | "deleted"
+  | "restored";
+
+export interface ActivityLog {
+  id: string;
+  applicationId: string;
+  type: ActivityLogType;
+  createdAt: Date;
+  fromStage?: Stage;
+  toStage?: Stage;
+  summary?: string;
+}
+
+/** 本地数据快照 */
+export interface BackupSnapshot {
+  id: string;
+  createdAt: Date;
+  reason: string;
+  applications: Application[];
+  activityLogs: ActivityLog[];
+}
+
+export interface JobTrackExport {
+  schemaVersion: number;
+  exportedAt: Date;
+  applications: Application[];
+  activityLogs: ActivityLog[];
+}
+
 /** 统计数据（派生数据） */
 export interface Stats {
   total: number;

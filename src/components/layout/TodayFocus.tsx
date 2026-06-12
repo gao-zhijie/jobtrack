@@ -1,99 +1,15 @@
 "use client";
 
-import { isBefore, differenceInDays, addDays, isToday } from "date-fns";
 import { AlertCircle, Archive, Calendar, CheckCircle2, Clock, Gift } from "lucide-react";
 import { useJobTrackStore } from "@/lib/store";
-import type { Application } from "@/lib/types";
+import { getFocusItems, type ApplicationReminder } from "@/lib/reminders";
 
-interface FocusItem {
-  app: Application;
-  type: "overdue" | "deadline24h" | "stale" | "newOffer" | "todayInterview";
-  sublabel: string;
-}
-
-function useFocusItems(): FocusItem[] {
+function useFocusItems(): ApplicationReminder[] {
   const applications = useJobTrackStore((state) => state.applications);
-  const now = new Date();
-  const items: FocusItem[] = [];
-
-  applications.forEach((app) => {
-    // Skip ended stages
-    if (["rejected", "withdrawn", "offer"].includes(app.stage)) {
-      // New offer: offer received within last 3 days
-      if (app.stage === "offer") {
-        const daysSinceOffer = differenceInDays(now, new Date(app.updatedAt));
-        if (daysSinceOffer <= 3) {
-          items.push({
-            app,
-            type: "newOffer",
-            sublabel: "新 Offer 需要确认",
-          });
-        }
-      }
-      return;
-    }
-
-    const daysSinceUpdate = differenceInDays(now, new Date(app.updatedAt));
-    if (daysSinceUpdate >= 14) {
-      items.push({
-        app,
-        type: "stale",
-        sublabel: `已经 ${daysSinceUpdate} 天没更新，适合决定是否归档`,
-      });
-    }
-
-    // Check nextDeadline
-    if (app.nextDeadline) {
-      const deadline = new Date(app.nextDeadline);
-      const todayEnd = addDays(now, 1);
-      todayEnd.setHours(0, 0, 0, 0);
-
-      // Overdue
-      if (isBefore(deadline, now)) {
-        const daysOverdue = differenceInDays(now, deadline);
-        items.push({
-          app,
-          type: "overdue",
-          sublabel: `截止已超时 ${daysOverdue} 天`,
-        });
-      }
-      // Within 24h (but not overdue)
-      else if (isBefore(deadline, todayEnd)) {
-        items.push({
-          app,
-          type: "deadline24h",
-          sublabel: "24h 内截止",
-        });
-      }
-    }
-
-    // Today's interviews (from interviewLogs)
-    app.interviewLogs.forEach((log) => {
-      if (isToday(new Date(log.date))) {
-        items.push({
-          app,
-          type: "todayInterview",
-          sublabel: `今日面试：${log.stage}`,
-        });
-      }
-    });
-  });
-
-  // Sort by priority
-  const priorityOrder = {
-    overdue: 0,
-    deadline24h: 1,
-    stale: 2,
-    newOffer: 3,
-    todayInterview: 4,
-  };
-  items.sort((a, b) => priorityOrder[a.type] - priorityOrder[b.type]);
-
-  // Return max 3
-  return items.slice(0, 3);
+  return getFocusItems(applications);
 }
 
-function FocusCard({ item }: { item: FocusItem }) {
+function FocusCard({ item }: { item: ApplicationReminder }) {
   const icons = {
     overdue: <AlertCircle size={16} className="text-danger flex-shrink-0" />,
     deadline24h: <Clock size={16} className="text-amber-500 flex-shrink-0" />,

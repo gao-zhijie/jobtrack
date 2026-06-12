@@ -6,6 +6,7 @@ import { zhCN } from "date-fns/locale";
 import { X, Calendar, Clock, AlertTriangle } from "lucide-react";
 import type { Application } from "@/lib/types";
 import { STAGE_CONFIG } from "@/lib/types";
+import { isSameLocalDay } from "@/lib/date";
 
 interface DayDetailProps {
   date: Date;
@@ -19,11 +20,11 @@ export function DayDetail({ date, applications, conflicts, onClose, onCardClick 
   // 计算当天总事件数（面试记录 + 截止日期）
   const totalEvents = applications.reduce((count, app) => {
     const interviewCount = app.interviewLogs.filter(
-      (log) => new Date(log.date).toDateString() === date.toDateString()
+      (log) => isSameLocalDay(log.date, date)
     ).length;
     const hasDeadline =
       app.nextDeadline &&
-      new Date(app.nextDeadline).toDateString() === date.toDateString();
+      isSameLocalDay(app.nextDeadline, date);
     return count + interviewCount + (hasDeadline ? 1 : 0);
   }, 0);
 
@@ -250,9 +251,7 @@ function DayDetailContent({
 
                   {/* 面试信息 */}
                   {app.interviewLogs
-                    .filter((log) =>
-                      new Date(log.date).toDateString() === date.toDateString()
-                    )
+                    .filter((log) => isSameLocalDay(log.date, date))
                     .map((log) => (
                       <div key={log.id} className="mt-2 pt-2 border-t border-border">
                         <div className="flex items-center gap-2 text-xs text-text-secondary">
@@ -264,8 +263,7 @@ function DayDetailContent({
 
                   {/* 截止日期信息 */}
                   {app.nextDeadline &&
-                    new Date(app.nextDeadline).toDateString() ===
-                      date.toDateString() && (
+                    isSameLocalDay(app.nextDeadline, date) && (
                       <div className="mt-2 pt-2 border-t border-border">
                         <div className="flex items-center gap-2 text-xs text-text-secondary">
                           <Calendar size={12} />

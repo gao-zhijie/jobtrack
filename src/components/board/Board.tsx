@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -419,11 +419,17 @@ export function Board() {
 
   return (
     <>
-      {/* 移动端视图 */}
-      <MobileBoardView />
+      {applications.length === 0 ? (
+        <EmptyBoardState onCreate={() => setShowNewForm(true)} />
+      ) : (
+        <>
+          {/* 移动端视图 */}
+          <MobileBoardView />
 
-      {/* 桌面端视图 */}
-      <DesktopBoardView />
+          {/* 桌面端视图 */}
+          <DesktopBoardView />
+        </>
+      )}
 
       {/* Card Detail Drawer - 响应式 */}
       <CardDrawer
@@ -450,6 +456,32 @@ export function Board() {
         <Celebration onComplete={() => setShowCelebration(false)} />
       )}
     </>
+  );
+}
+
+function EmptyBoardState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="min-h-[360px] flex items-center justify-center">
+      <div className="w-full max-w-[420px] bg-white border border-border rounded-xl shadow-sm px-6 py-8 text-left">
+        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-3">
+          开始记录
+        </p>
+        <h2 className="text-xl font-semibold text-text-primary mb-3">
+          先放进第一条申请
+        </h2>
+        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+          JobTrack 会从真实记录开始陪你整理节奏。投递、截止、面试复盘和周报都会围绕这条申请自动长出来。
+        </p>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="btn btn-primary inline-flex items-center gap-1.5"
+        >
+          <Plus size={16} />
+          新增第一条申请
+        </button>
+      </div>
+    </div>
   );
 }
 

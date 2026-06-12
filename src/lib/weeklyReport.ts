@@ -8,7 +8,7 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import type { Application } from "./types";
+import type { ActivityLog, Application, Stage } from "./types";
 
 export interface WeekStats {
   // 本周数据
@@ -51,8 +51,22 @@ export interface WeekStats {
   closingMessage: string;
 }
 
-export function calculateWeekReport(applications: Application[]): WeekStats {
-  const today = new Date();
+const STAGE_LABELS: Record<Stage, string> = {
+  applied: "已投递",
+  written: "笔试中",
+  interview1: "初面",
+  interview2: "二面",
+  final: "终面",
+  offer: "Offer",
+  rejected: "已拒绝",
+  withdrawn: "已撤回",
+};
+
+export function calculateWeekReport(
+  applications: Application[],
+  activityLogs: ActivityLog[] = [],
+  today = new Date()
+): WeekStats {
 
   // 空数据直接返回
   if (applications.length === 0) {
@@ -115,43 +129,77 @@ export function calculateWeekReport(applications: Application[]): WeekStats {
   ).size;
 
   // 本周新 Offer
-  const thisWeekOffers = applications.filter(
-    (app) =>
-      app.stage === "offer" &&
-      isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
+  const thisWeekOfferLogs = activityLogs.filter(
+    (log) =>
+      log.type === "stage_changed" &&
+      log.toStage === "offer" &&
+      isWithinInterval(new Date(log.createdAt), { start: weekStart, end: weekEnd })
   );
+
+  const thisWeekOffers = activityLogs.length > 0
+    ? applications.filter((app) => thisWeekOfferLogs.some((log) => log.applicationId === app.id))
+    : applications.filter(
+        (app) =>
+          app.stage === "offer" &&
+          isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
+      );
 
   // 本周新拒绝
-  const thisWeekRejections = applications.filter(
-    (app) =>
-      (app.stage === "rejected" || app.stage === "withdrawn") &&
-      isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
+  const thisWeekRejectionLogs = activityLogs.filter(
+    (log) =>
+      log.type === "stage_changed" &&
+      (log.toStage === "rejected" || log.toStage === "withdrawn") &&
+      isWithinInterval(new Date(log.createdAt), { start: weekStart, end: weekEnd })
   );
 
+  const thisWeekRejections = activityLogs.length > 0
+    ? applications.filter((app) => thisWeekRejectionLogs.some((log) => log.applicationId === app.id))
+    : applications.filter(
+        (app) =>
+          (app.stage === "rejected" || app.stage === "withdrawn") &&
+          isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
+      );
+
   // 本周进阶
-  const thisWeekAdvances: { company: string; from: string; to: string }[] = [];
-  applications.forEach((app) => {
-    if (
-      ["interview1", "interview2", "final", "offer"].includes(app.stage) &&
-      isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
-    ) {
-      const log = app.interviewLogs[app.interviewLogs.length - 1];
-      if (log) {
-        thisWeekAdvances.push({
-          company: app.company,
-          from: log.stage,
-          to:
-            app.stage === "interview1"
-              ? "初面"
-              : app.stage === "interview2"
-              ? "二面"
-              : app.stage === "final"
-              ? "终面"
-              : "Offer",
-        });
+  let thisWeekAdvances: { company: string; from: string; to: string }[] = [];
+  if (activityLogs.length > 0) {
+    thisWeekAdvances = activityLogs
+      .filter(
+        (log) =>
+          log.type === "stage_changed" &&
+          !!log.fromStage &&
+          !!log.toStage &&
+          !["rejected", "withdrawn"].includes(log.toStage) &&
+          isWithinInterval(new Date(log.createdAt), { start: weekStart, end: weekEnd })
+      )
+      .map((log) => {
+        const app = applications.find((item) => item.id === log.applicationId);
+        return app
+          ? {
+              company: app.company,
+              from: STAGE_LABELS[log.fromStage!],
+              to: STAGE_LABELS[log.toStage!],
+            }
+          : null;
+      })
+      .filter((item): item is { company: string; from: string; to: string } => item !== null);
+  } else {
+    applications.forEach((app) => {
+      if (
+        ["interview1", "interview2", "final", "offer"].includes(app.stage) &&
+        isWithinInterval(new Date(app.updatedAt), { start: weekStart, end: weekEnd })
+      ) {
+        const log = app.interviewLogs[app.interviewLogs.length - 1];
+        if (log) {
+          thisWeekAdvances.push({
+            company: app.company,
+            from: log.stage,
+            to: STAGE_LABELS[app.stage],
+          });
+        }
       }
-    }
-  });
+    });
+  }
 
   // 上周数据
   const lastWeekApplied = applications.filter((app) =>
@@ -201,11 +249,18 @@ export function calculateWeekReport(applications: Application[]): WeekStats {
   const nextWeekDeadlines = upcomingDeadlinesList.length;
 
   // 连续被拒计算
-  const recentRejections = applications.filter(
-    (app) =>
-      (app.stage === "rejected" || app.stage === "withdrawn") &&
-      new Date(app.updatedAt) >= lastWeekStart
-  ).length;
+  const recentRejections = activityLogs.length > 0
+    ? activityLogs.filter(
+        (log) =>
+          log.type === "stage_changed" &&
+          (log.toStage === "rejected" || log.toStage === "withdrawn") &&
+          new Date(log.createdAt) >= lastWeekStart
+      ).length
+    : applications.filter(
+        (app) =>
+          (app.stage === "rejected" || app.stage === "withdrawn") &&
+          new Date(app.updatedAt) >= lastWeekStart
+      ).length;
 
   // 当前在途
   const totalActive = applications.filter(

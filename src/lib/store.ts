@@ -1,15 +1,41 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import type { Application, InterviewLog, Stage, Stats, ConflictGroup } from "./types";
-import { MOCK_APPLICATIONS } from "./mock";
+import type {
+  ActivityLog,
+  Application,
+  BackupSnapshot,
+  ConflictGroup,
+  InterviewLog,
+  JobTrackExport,
+  Stage,
+  Stats,
+} from "./types";
+import {
+  CURRENT_SCHEMA_VERSION,
+  createBackupSnapshot,
+  createExportPayload,
+  importJobTrackData,
+  limitSnapshots,
+  migratePersistedState,
+} from "./dataSafety";
+import {
+  formatDateInputLocal,
+  normalizeActivityLogDates,
+  normalizeApplicationDates,
+  normalizeDate,
+  normalizeSnapshotDates,
+} from "./date";
 
 // =============================================================================
 // Store Types
 // =============================================================================
 
 interface JobTrackState {
+  schemaVersion: number;
   applications: Application[];
+  activityLogs: ActivityLog[];
+  backupSnapshots: BackupSnapshot[];
 
   // CRUD
   addApplication: (data: Omit<Application, "id" | "createdAt" | "updatedAt" | "interviewLogs">) => string;
@@ -24,6 +50,58 @@ interface JobTrackState {
   addInterviewLog: (appId: string, log: Omit<InterviewLog, "id">) => void;
   updateInterviewLog: (appId: string, logId: string, patch: Partial<InterviewLog>) => void;
   deleteInterviewLog: (appId: string, logId: string) => void;
+
+  // 数据安全
+  exportData: () => JobTrackExport;
+  importData: (payload: string | unknown) => void;
+  createSnapshot: (reason: string) => string;
+  restoreSnapshot: (id: string) => void;
+  clearAllData: () => void;
+}
+
+function stageLabel(stage: Stage): string {
+  const labels: Record<Stage, string> = {
+    applied: "已投递",
+    written: "笔试中",
+    interview1: "初面",
+    interview2: "二面",
+    final: "终面",
+    offer: "Offer",
+    rejected: "已拒绝",
+    withdrawn: "已撤回",
+  };
+  return labels[stage];
+}
+
+function createActivityLog(
+  applicationId: string,
+  type: ActivityLog["type"],
+  summary: string,
+  extra?: Pick<ActivityLog, "fromStage" | "toStage">
+): ActivityLog {
+  return {
+    id: uuidv4(),
+    applicationId,
+    type,
+    summary,
+    createdAt: new Date(),
+    ...extra,
+  };
+}
+
+function createSnapshotList(
+  reason: string,
+  applications: Application[],
+  activityLogs: ActivityLog[],
+  existing: BackupSnapshot[]
+): BackupSnapshot[] {
+  if (applications.length === 0 && activityLogs.length === 0) {
+    return existing;
+  }
+  return limitSnapshots([
+    createBackupSnapshot(reason, applications, activityLogs),
+    ...existing,
+  ]);
 }
 
 
@@ -33,8 +111,11 @@ interface JobTrackState {
 
 export const useJobTrackStore = create<JobTrackState>()(
   persist(
-    (set) => ({
-      applications: MOCK_APPLICATIONS,
+    (set, get) => ({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      applications: [],
+      activityLogs: [],
+      backupSnapshots: [],
 
       addApplication: (data) => {
         const id = uuidv4();
@@ -49,23 +130,56 @@ export const useJobTrackStore = create<JobTrackState>()(
         };
         set((state) => ({
           applications: [...state.applications, newApp],
+          activityLogs: [
+            ...state.activityLogs,
+            createActivityLog(id, "created", `新增了 ${newApp.company} 的申请`),
+          ],
         }));
         return id;
       },
 
       updateApplication: (id, patch) => {
         set((state) => ({
-          applications: state.applications.map((app) =>
-            app.id === id
-              ? { ...app, ...patch, updatedAt: new Date() }
-              : app
-          ),
+          applications: state.applications.map((app) => {
+            if (app.id !== id) return app;
+            return { ...app, ...patch, updatedAt: new Date() };
+          }),
+          activityLogs: [
+            ...state.activityLogs,
+            ...state.applications.flatMap((app) => {
+              if (app.id !== id) return [];
+              if (patch.stage && patch.stage !== app.stage) {
+                const isArchived = patch.stage === "withdrawn" || patch.stage === "rejected";
+                return [
+                  createActivityLog(
+                    id,
+                    isArchived ? "archived" : "stage_changed",
+                    `${app.company} 从${stageLabel(app.stage)}进入${stageLabel(patch.stage)}`,
+                    { fromStage: app.stage, toStage: patch.stage }
+                  ),
+                ];
+              }
+              return [createActivityLog(id, "updated", `更新了 ${app.company} 的申请信息`)];
+            }),
+          ],
         }));
       },
 
       deleteApplication: (id) => {
         set((state) => ({
+          backupSnapshots: createSnapshotList(
+            "删除前自动备份",
+            state.applications,
+            state.activityLogs,
+            state.backupSnapshots
+          ),
           applications: state.applications.filter((app) => app.id !== id),
+          activityLogs: [
+            ...state.activityLogs,
+            ...state.applications
+              .filter((app) => app.id === id)
+              .map((app) => createActivityLog(id, "deleted", `删除了 ${app.company} 的申请`)),
+          ],
         }));
       },
 
@@ -78,7 +192,7 @@ export const useJobTrackStore = create<JobTrackState>()(
           const updatedStageApps = orderedIds.map((id, index) => {
             const app = stageApps.find((a) => a.id === id);
             if (app) {
-              return { ...app, sortOrder: index, updatedAt: new Date() };
+              return { ...app, sortOrder: index };
             }
             return null;
           }).filter(Boolean) as Application[];
@@ -96,6 +210,24 @@ export const useJobTrackStore = create<JobTrackState>()(
               ? { ...app, stage: newStage, updatedAt: new Date() }
               : app
           ),
+          activityLogs: [
+            ...state.activityLogs,
+            ...state.applications.flatMap((app) => {
+              if (app.id !== id || app.stage === newStage) return [];
+              const type: ActivityLog["type"] =
+                newStage === "rejected" || newStage === "withdrawn"
+                  ? "archived"
+                  : "stage_changed";
+              return [
+                createActivityLog(
+                  id,
+                  type,
+                  `${app.company} 从${stageLabel(app.stage)}进入${stageLabel(newStage)}`,
+                  { fromStage: app.stage, toStage: newStage }
+                ),
+              ];
+            }),
+          ],
         }));
       },
 
@@ -114,6 +246,12 @@ export const useJobTrackStore = create<JobTrackState>()(
                 }
               : app
           ),
+          activityLogs: [
+            ...state.activityLogs,
+            ...state.applications
+              .filter((app) => app.id === appId)
+              .map((app) => createActivityLog(appId, "interview_added", `记录了 ${app.company} 的${log.stage}复盘`)),
+          ],
         }));
       },
 
@@ -148,11 +286,102 @@ export const useJobTrackStore = create<JobTrackState>()(
           ),
         }));
       },
+
+      exportData: () => {
+        const state = get();
+        return createExportPayload(state.applications, state.activityLogs);
+      },
+
+      importData: (payload) => {
+        const imported = importJobTrackData(payload);
+        set((state) => ({
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          backupSnapshots: createSnapshotList(
+            "导入前自动备份",
+            state.applications,
+            state.activityLogs,
+            state.backupSnapshots
+          ),
+          applications: imported.applications,
+          activityLogs: imported.activityLogs,
+        }));
+      },
+
+      createSnapshot: (reason) => {
+        const state = get();
+        const snapshot = createBackupSnapshot(reason, state.applications, state.activityLogs);
+        set((current) => ({
+          backupSnapshots: limitSnapshots([snapshot, ...current.backupSnapshots]),
+        }));
+        return snapshot.id;
+      },
+
+      restoreSnapshot: (id) => {
+        set((state) => {
+          const snapshot = state.backupSnapshots.find((item) => item.id === id);
+          if (!snapshot) return state;
+          const restoredApps = snapshot.applications.map(normalizeApplicationDates);
+          const restoredLogs = snapshot.activityLogs.map(normalizeActivityLogDates);
+          return {
+            applications: restoredApps,
+            activityLogs: [
+              ...restoredLogs,
+              ...restoredApps.map((app) =>
+                createActivityLog(app.id, "restored", `从本地快照恢复了 ${app.company}`)
+              ),
+            ],
+            backupSnapshots: createSnapshotList(
+              "恢复前自动备份",
+              state.applications,
+              state.activityLogs,
+              state.backupSnapshots
+            ),
+          };
+        });
+      },
+
+      clearAllData: () => {
+        set((state) => ({
+          backupSnapshots: createSnapshotList(
+            "清空前自动备份",
+            state.applications,
+            state.activityLogs,
+            state.backupSnapshots
+          ),
+          applications: [],
+          activityLogs: [],
+        }));
+      },
     }),
     {
       name: "jobtrack-storage",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ applications: state.applications }),
+      version: CURRENT_SCHEMA_VERSION,
+      storage: createJSONStorage(() => localStorage, {
+        reviver: (key, value) => {
+          if (
+            ["appliedAt", "nextDeadline", "createdAt", "updatedAt", "date", "exportedAt"].includes(key) &&
+            typeof value === "string"
+          ) {
+            return normalizeDate(value);
+          }
+          return value;
+        },
+      }),
+      migrate: (persistedState) => migratePersistedState(persistedState),
+      merge: (persistedState, currentState) => {
+        const migrated = migratePersistedState(persistedState);
+        return {
+          ...currentState,
+          ...migrated,
+          backupSnapshots: migrated.backupSnapshots.map(normalizeSnapshotDates),
+        };
+      },
+      partialize: (state) => ({
+        schemaVersion: state.schemaVersion,
+        applications: state.applications,
+        activityLogs: state.activityLogs,
+        backupSnapshots: state.backupSnapshots,
+      }),
     }
   )
 );
@@ -245,7 +474,7 @@ export const selectConflicts = (
   applications.forEach((app) => {
     // 已有面试记录的日期
     app.interviewLogs.forEach((log) => {
-      const dateKey = new Date(log.date).toISOString().split("T")[0];
+      const dateKey = formatDateInputLocal(log.date);
       const existing = dateMap.get(dateKey) || [];
       existing.push({ app, isInterview: true });
       dateMap.set(dateKey, existing);
@@ -253,7 +482,7 @@ export const selectConflicts = (
 
     // 即将到来的面试截止日期也算
     if (app.nextDeadline && app.stage !== "offer") {
-      const dateKey = new Date(app.nextDeadline).toISOString().split("T")[0];
+      const dateKey = formatDateInputLocal(app.nextDeadline);
       const existing = dateMap.get(dateKey) || [];
       existing.push({ app, isInterview: false });
       dateMap.set(dateKey, existing);

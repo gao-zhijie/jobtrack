@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { formatDistanceToNow, differenceInDays, isBefore, addDays } from "date-fns";
+import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Archive, ChevronRight, AlertCircle } from "lucide-react";
 import type { Application } from "@/lib/types";
 import { STAGE_CONFIG } from "@/lib/types";
 import { useJobTrackStore } from "@/lib/store";
+import { getApplicationReminder } from "@/lib/reminders";
 
 interface MobileCardProps {
   application: Application;
@@ -20,22 +21,9 @@ export function MobileCard({ application, onClick }: MobileCardProps) {
   // 计算投递天数
   const daysSinceApplied = differenceInDays(new Date(), new Date(application.appliedAt));
 
-  // 判断状态
-  const isOverdue =
-    application.nextDeadline &&
-    isBefore(new Date(application.nextDeadline), new Date());
-
-  const isDeadline24h =
-    !isOverdue &&
-    application.nextDeadline &&
-    isBefore(new Date(application.nextDeadline), addDays(new Date(), 1));
-
-  const isUrgent = isOverdue || isDeadline24h;
-
-  // 休眠态：14 天无响应且还在流程中
-  const isStale =
-    !["rejected", "withdrawn", "offer"].includes(application.stage) &&
-    daysSinceApplied > 14;
+  const reminder = getApplicationReminder(application);
+  const isUrgent = reminder?.type === "overdue" || reminder?.type === "deadline24h";
+  const isStale = reminder?.type === "stale";
 
   const stageConfig = STAGE_CONFIG.find((s) => s.key === application.stage);
 
@@ -82,12 +70,11 @@ export function MobileCard({ application, onClick }: MobileCardProps) {
               />
               <div className="text-xs text-danger font-medium mt-1">
                 {application.nextDeadline && (
-                  isOverdue
-                    ? `超时 ${differenceInDays(new Date(), new Date(application.nextDeadline))} 天`
-                    : formatDistanceToNow(new Date(application.nextDeadline), {
-                        locale: zhCN,
-                        addSuffix: true,
-                      })
+                  reminder?.sublabel ||
+                  formatDistanceToNow(new Date(application.nextDeadline), {
+                    locale: zhCN,
+                    addSuffix: true,
+                  })
                 )}
               </div>
             </div>

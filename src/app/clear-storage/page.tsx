@@ -2,14 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useJobTrackStore } from "@/lib/store";
 
 export default function ClearStorage() {
   const router = useRouter();
+  const clearAllData = useJobTrackStore((state) => state.clearAllData);
 
   useEffect(() => {
-    localStorage.removeItem("jobtrack-storage");
+    clearAllData();
     router.push("/board");
-  }, [router]);
+  }, [clearAllData, router]);
 
   return (
     <div className="flex items-center justify-center h-screen text-[#6F7177]">

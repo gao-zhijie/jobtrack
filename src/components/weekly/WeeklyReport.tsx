@@ -9,7 +9,11 @@ import { calculateWeekReport } from "@/lib/weeklyReport";
 
 export function WeeklyReport() {
   const applications = useJobTrackStore((state) => state.applications);
-  const stats = useMemo(() => calculateWeekReport(applications), [applications]);
+  const activityLogs = useJobTrackStore((state) => state.activityLogs);
+  const stats = useMemo(
+    () => calculateWeekReport(applications, activityLogs),
+    [applications, activityLogs]
+  );
 
   if (stats.isEmpty) {
     return (

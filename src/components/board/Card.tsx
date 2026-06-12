@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatDistanceToNow, differenceInDays, isBefore, addDays } from "date-fns";
+import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Archive } from "lucide-react";
 import type { Application } from "@/lib/types";
 import { useJobTrackStore } from "@/lib/store";
+import { getApplicationReminder } from "@/lib/reminders";
 
 interface CardProps {
   application: Application;
@@ -38,22 +39,9 @@ export function Card({ application, onClick }: CardProps) {
   // 计算投递天数
   const daysSinceApplied = differenceInDays(new Date(), new Date(application.appliedAt));
 
-  // 判断状态
-  const isOverdue =
-    application.nextDeadline &&
-    isBefore(new Date(application.nextDeadline), new Date());
-
-  const isDeadline24h =
-    !isOverdue &&
-    application.nextDeadline &&
-    isBefore(new Date(application.nextDeadline), addDays(new Date(), 1));
-
-  const isUrgent = isOverdue || isDeadline24h;
-
-  // 休眠态：14 天无响应且还在流程中
-  const isStale =
-    !["rejected", "withdrawn", "offer"].includes(application.stage) &&
-    daysSinceApplied > 14;
+  const reminder = getApplicationReminder(application);
+  const isUrgent = reminder?.type === "overdue" || reminder?.type === "deadline24h";
+  const isStale = reminder?.type === "stale";
 
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
@@ -104,12 +92,11 @@ export function Card({ application, onClick }: CardProps) {
           {/* 截止信息 */}
           {application.nextDeadline && (
             <div className="text-xs text-danger font-medium">
-              {isOverdue
-                ? `超时 ${differenceInDays(new Date(), new Date(application.nextDeadline))} 天`
-                : formatDistanceToNow(new Date(application.nextDeadline), {
-                    locale: zhCN,
-                    addSuffix: true,
-                  })}
+              {reminder?.sublabel ||
+                formatDistanceToNow(new Date(application.nextDeadline), {
+                  locale: zhCN,
+                  addSuffix: true,
+                })}
             </div>
           )}
         </div>

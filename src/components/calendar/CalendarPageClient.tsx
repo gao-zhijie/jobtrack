@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { useJobTrackStore } from "@/lib/store";
 import { selectConflicts } from "@/lib/store";
 import { isSameDay } from "date-fns";
+import { CalendarDays } from "lucide-react";
 import { MonthView } from "./MonthView";
 import { ConflictBanner } from "./ConflictBanner";
 import { DayDetail } from "./DayDetail";
@@ -29,11 +31,8 @@ export function CalendarPageClient() {
   const handleConflictBannerClick = (dateStr: string) => {
     const date = new Date(dateStr);
     const dayConflicts = applications.filter((app) =>
-      app.interviewLogs.some(
-        (log) =>
-          isSameDay(new Date(log.date), date) ||
-          (app.nextDeadline && isSameDay(new Date(app.nextDeadline), date))
-      )
+      app.interviewLogs.some((log) => isSameDay(new Date(log.date), date)) ||
+      (app.nextDeadline && isSameDay(new Date(app.nextDeadline), date))
     );
     setSelectedDate(date);
     setSelectedEvents(dayConflicts);
@@ -61,7 +60,11 @@ export function CalendarPageClient() {
 
       {/* Month View */}
       <div className="flex-1 overflow-hidden">
-        <MonthView onDayClick={handleDayClick} />
+        {applications.length === 0 ? (
+          <EmptyCalendarState />
+        ) : (
+          <MonthView onDayClick={handleDayClick} />
+        )}
       </div>
 
       {/* Day Detail Sidebar */}
@@ -80,6 +83,28 @@ export function CalendarPageClient() {
         application={selectedApp}
         onClose={() => setSelectedApp(null)}
       />
+    </div>
+  );
+}
+
+function EmptyCalendarState() {
+  return (
+    <div className="h-full flex items-center justify-center px-4">
+      <div className="w-full max-w-[420px] bg-white border border-border rounded-xl shadow-sm px-6 py-8">
+        <CalendarDays size={20} className="text-primary mb-4" />
+        <h2 className="text-xl font-semibold text-text-primary mb-3">
+          日历会在你需要它时出现
+        </h2>
+        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+          新增申请并填入下一步截止或面试复盘后，这里会自动整理你的节奏和冲突。
+        </p>
+        <Link
+          href="/board"
+          className="btn btn-primary inline-flex items-center"
+        >
+          去看板添加
+        </Link>
+      </div>
     </div>
   );
 }
