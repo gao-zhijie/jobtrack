@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { ChevronRight, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -96,6 +97,19 @@ export function Board() {
     window.addEventListener("open-new-application", handleOpenNew);
     return () => window.removeEventListener("open-new-application", handleOpenNew);
   }, []);
+
+  // Listen for focus cards outside the board component.
+  useEffect(() => {
+    const handleOpenDetail = (event: Event) => {
+      const appId = (event as CustomEvent<{ appId?: string }>).detail?.appId;
+      if (!appId) return;
+      const app = applications.find((item) => item.id === appId);
+      if (app) setSelectedApp(app);
+    };
+
+    window.addEventListener("open-application-detail", handleOpenDetail);
+    return () => window.removeEventListener("open-application-detail", handleOpenDetail);
+  }, [applications]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -372,7 +386,7 @@ export function Board() {
                 ${showEnded ? "rotate-90" : ""}
               `}
             >
-              ▶
+              <ChevronRight size={14} />
             </span>
             已结束
             <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium bg-text-muted/20 text-text-muted">
@@ -455,7 +469,7 @@ function NewApplicationModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="text-text-secondary hover:text-text-primary"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
         <div className="p-4">

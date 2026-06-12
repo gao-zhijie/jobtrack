@@ -41,7 +41,7 @@ export function Celebration({ onComplete }: CelebrationProps) {
       }}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center"
+        className="bg-white rounded-xl shadow p-8 flex flex-col items-center"
         style={{
           transform: `scale(${scale})`,
           transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
